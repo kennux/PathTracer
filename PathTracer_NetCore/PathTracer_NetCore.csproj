@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <Platforms>AnyCPU;x64</Platforms>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DefineConstants>TRACE;NET_CORE</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <DefineConstants>TRACE;NET_CORE</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\PathTracer\BitHelper.cs" Link="BitHelper.cs" />
+    <Compile Include="..\PathTracer\BoundingBox.cs" Link="BoundingBox.cs" />
+    <Compile Include="..\PathTracer\Camera.cs" Link="Camera.cs" />
+    <Compile Include="..\PathTracer\DebugMaterial.cs" Link="DebugMaterial.cs" />
+    <Compile Include="..\PathTracer\DielectricMaterial.cs" Link="DielectricMaterial.cs" />
+    <Compile Include="..\PathTracer\FastRandom.cs" Link="FastRandom.cs" />
+    <Compile Include="..\PathTracer\HitInfo.cs" Link="HitInfo.cs" />
+    <Compile Include="..\PathTracer\LambertianMaterial.cs" Link="LambertianMaterial.cs" />
+    <Compile Include="..\PathTracer\Material.cs" Link="Material.cs" />
+    <Compile Include="..\PathTracer\Mathf.cs" Link="Mathf.cs" />
+    <Compile Include="..\PathTracer\MathUtil.cs" Link="MathUtil.cs" />
+    <Compile Include="..\PathTracer\MetalMaterial.cs" Link="MetalMaterial.cs" />
+    <Compile Include="..\PathTracer\Ray.cs" Link="Ray.cs" />
+    <Compile Include="..\PathTracer\Scene.cs" Link="Scene.cs" />
+    <Compile Include="..\PathTracer\Sphere.cs" Link="Sphere.cs" />
+    <Compile Include="..\PathTracer\TraceParams.cs" Link="TraceParams.cs" />
+    <Compile Include="..\PathTracer\Tracer.cs" Link="Tracer.cs" />
+  </ItemGroup>
+
+</Project>
