@@ -34,8 +34,8 @@ namespace PathTracer.Test
 
             scene.Add(sphereHitSystem);
             scene.PrepareForRendering();
-            int width = 640;
-            int height = 480;
+            int width = 1920;
+            int height = 1080;
 
             Camera camera = new Camera(new Vector3(0, 2, 3), new Vector3(0, 0, 0), new Vector3(0, 1, 0), 70, (float)width / (float)height, 0.025f, 3f);
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
@@ -49,7 +49,7 @@ namespace PathTracer.Test
                 scene = scene,
                 maxBounces = 12,
                 maxDepth = float.PositiveInfinity,
-                traceTileDimension = 16,
+                traceTileDimension = 32,
                 multithreading = true
             };
             var result = Tracer.Render(parameters, (count, processed) =>

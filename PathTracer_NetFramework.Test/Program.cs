@@ -45,11 +45,11 @@ namespace PathTracer.Test
                 camera = camera,
                 height = height,
                 width = width,
-                samplesPerPixel = 2048,
+                samplesPerPixel = 512,
                 scene = scene,
-                maxBounces = 16,
+                maxBounces = 12,
                 maxDepth = float.PositiveInfinity,
-                traceTileDimension = 16,
+                traceTileDimension = 32,
                 multithreading = true
             };
             var result = Tracer.Render(parameters, (count, processed) =>
