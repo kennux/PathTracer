@@ -7,83 +7,109 @@ using System.Numerics;
 
 namespace PathTracer
 {
-    /// <summary>
-    /// Sphere object implementation.
-    /// </summary>
-    public struct Sphere
+    public class SceneSphereHitSystem : SceneHitSystem<Sphere>
     {
-        public Vector3 center
+        private Material[] material;
+        private Vector3[] center;
+        private float[] radius;
+        private float[] radiusSq;
+        private float[] invRadius;
+        private int sphereCount;
+
+        public override void PrepareForRendering()
         {
-            get { return this._center; }
-            set { this._center = value; Precompute(); }
+            this.sphereCount = this.objects.Count;
+            this.material = new Material[this.sphereCount];
+            this.center = new Vector3[this.sphereCount];
+            this.radius = new float[this.sphereCount];
+            this.radiusSq = new float[this.sphereCount];
+            this.invRadius = new float[this.sphereCount];
+
+            for (int i = 0; i < this.sphereCount; i++)
+            {
+                this.material[i] = this.objects[i].material;
+                this.center[i] = this.objects[i].center;
+                this.radius[i] = this.objects[i].radius;
+                this.radiusSq[i] = this.radius[i] * this.radius[i];
+                this.invRadius[i] = 1f / this.radius[i];
+            }
         }
 
-        public float radius
+        public override void Raycast(Ray[] rays, HitInfo[] hits, float minDist, float maxDist, int count, uint rayMask, ref uint hitMask, ref long rayCounter)
         {
-            get { return this._radius; }
-            set { this._radius = value; Precompute(); }
-        }
+            for (int i = 0; i < count; i++)
+            {
+                BitHelper.UnsetBit(ref hitMask, i);
+                if (!BitHelper.GetBit(ref rayMask, i))
+                    continue;
 
-        private Vector3 _center;
-        private float _radius;
-        private float _radiusSq;
-        private float _invRadius;
+                rayCounter++;
+                Ray ray = rays[i];
+                HitInfo hitInfo = new HitInfo();
+                for (int j = 0; j < this.sphereCount; j++)
+                {
+                    // Inlined and optimized math
+                    Vector3 center = this.center[j];
+                    Vector3 oc = ray.origin - center;
+                    float b = Vector3.Dot(oc, ray.direction);
+                    if (b > 0f) // Behind?
+                        continue;
+
+                    bool hasHit = false;
+                    float c = oc.LengthSquared();
+                    float discriminantSqr = b * b - (c - radiusSq[j]);
+                    if (discriminantSqr > 0)
+                    {
+                        float discriminant = Mathf.Sqrt(discriminantSqr);
+                        hitInfo.distance = (-b - discriminant);
+                        if (hitInfo.distance < maxDist && hitInfo.distance > minDist)
+                        {
+                            ray.GetPointOptimized(hitInfo.distance, ref hitInfo.point);
+                            hitInfo.normal = (hitInfo.point - center) * this.invRadius[j];
+                            hitInfo.material = this.material[j];
+                            hasHit = true;
+                        }
+                        else
+                        {
+                            hitInfo.distance = (-b + discriminant);
+                            if (hitInfo.distance < maxDist && hitInfo.distance > minDist)
+                            {
+                                ray.GetPointOptimized(hitInfo.distance, ref hitInfo.point);
+                                hitInfo.normal = (hitInfo.point - center) * this.invRadius[j];
+                                hitInfo.material = this.material[j];
+                                hasHit = true;
+                            }
+                        }
+                    }
+
+                    if (hasHit)
+                    {
+                        if (BitHelper.GetBit(ref hitMask, i))
+                            HitInfo.ExchangeIfBetter(ref hits[i], hitInfo);
+                        else
+                        {
+                            hits[i] = hitInfo;
+                            BitHelper.SetBit(ref hitMask, i);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    public class Sphere : ISceneObject
+    {
+        public Vector3 center;
+        public float radius;
 
         public Material material;
 
-        /// <summary>
-        /// Called when <see cref="_center"/> or <see cref="_radius"/> is changed to precompute collision data.
-        /// </summary>
-        private void Precompute()
-        {
-            this._radiusSq = this._radius * this._radius;
-            this._invRadius = 1f / this._radius;
-        }
-
         public Sphere(Vector3 center, float radius, Material material)
         {
-            this._center = center;
-            this._radius = radius;
-
-            // Precompute() inlined
-            this._radiusSq = this._radius * this._radius;
-            this._invRadius = 1f / this._radius;
+            this.center = center;
+            this.radius = radius;
             
             this.material = material;
-        }
-        
-        public bool Raycast(ref Ray ray, float minDist, float maxDist, ref HitInfo hitInfo)
-        {
-            // Inlined and optimized math
-            Vector3 oc = ray.origin - _center;
-            float b = Vector3.Dot(oc, ray.direction);
-            if (b > 0f) // Behind?
-                return false;
-
-            float c = oc.LengthSquared();
-            float discriminantSqr = b * b - (c - _radiusSq);
-            if (discriminantSqr > 0)
-            {
-                float discriminant = Mathf.Sqrt(discriminantSqr);
-                float temp = (-b - discriminant);
-                if (temp < maxDist && temp > minDist)
-                {
-                    ray.GetPointOptimized(temp, ref hitInfo.point);
-                    hitInfo.normal = (hitInfo.point - this._center) * this._invRadius;
-                    hitInfo.material = this.material;
-                    return true;
-                }
-
-                temp = (-b + discriminant);
-                if (temp < maxDist && temp > minDist)
-                {
-                    ray.GetPointOptimized(temp, ref hitInfo.point);
-                    hitInfo.normal = (hitInfo.point - this._center) * this._invRadius;
-                    hitInfo.material = this.material;
-                    return true;
-                }
-            }
-            return false;
         }
     }
 }

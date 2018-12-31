@@ -28,9 +28,11 @@ namespace PathTracer.Test
             };
 
             Scene scene = new Scene();
+            SceneSphereHitSystem sphereHitSystem = new SceneSphereHitSystem();
             for (int i = 0; i < spheres.Length; i++)
-                scene.Add(spheres[i]);
+                sphereHitSystem.Add(spheres[i]);
 
+            scene.Add(sphereHitSystem);
             scene.PrepareForRendering();
             int width = 640;
             int height = 480;
