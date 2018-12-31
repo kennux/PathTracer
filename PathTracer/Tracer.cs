@@ -147,9 +147,9 @@ namespace PathTracer
                             if (hitMask == 0)
                                 break;
 
+                            bounces = 0;
                             for (int i = 0; i < batchRayCount; i++)
                             {
-                                BitHelper.UnsetBit(ref bounces, i);
                                 if (BitHelper.GetBit(ref hitMask, i)) // Did ray hit?
                                 {
                                     if (hits[i].material.Scatter(ref hits[i], out atten, ref rays[i], tile.parameters.scene, ref rndState))

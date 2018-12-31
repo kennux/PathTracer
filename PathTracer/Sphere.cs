@@ -37,9 +37,9 @@ namespace PathTracer
 
         public override void Raycast(Ray[] rays, HitInfo[] hits, float minDist, float maxDist, int count, uint rayMask, ref uint hitMask, ref long rayCounter)
         {
+            hitMask = 0;
             for (int i = 0; i < count; i++)
             {
-                BitHelper.UnsetBit(ref hitMask, i);
                 if (!BitHelper.GetBit(ref rayMask, i))
                     continue;
 
