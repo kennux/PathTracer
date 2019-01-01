@@ -14,7 +14,10 @@ namespace PathTracer
         private Vector3[] p3;
         private Vector3[] faceNormal;
         private Material[] material;
+        private BoundingBox[] boundingBoxes;
         private int triangleCount;
+
+        private OCTree ocTree = new OCTree();
 
         public override void PrepareForRendering()
         {
@@ -24,6 +27,7 @@ namespace PathTracer
             this.p3 = new Vector3[this.triangleCount];
             this.faceNormal = new Vector3[this.triangleCount];
             this.material = new Material[this.triangleCount];
+            this.boundingBoxes = new BoundingBox[this.triangleCount];
 
             for (int i = 0; i < this.triangleCount; i++)
             {
@@ -32,22 +36,41 @@ namespace PathTracer
                 this.p3[i] = this.objects[i].p3;
                 this.faceNormal[i] = this.objects[i].faceNormal;
                 this.material[i] = this.objects[i].material;
+                this.boundingBoxes[i] = this.objects[i].CalcBoundingBox();
             }
+
+            this.ocTree.Bake(this.boundingBoxes);
+            this.raycastDelegate = this.Raycast;
         }
 
         private const float Epsilon = float.Epsilon;
 
+        private OCTree.RaycastCallback<State> raycastDelegate;
+
+        // State
+        struct State
+        {
+            public Ray ray;
+            public uint hitMask;
+            public HitInfo hitInfo;
+            public HitInfo[] hits;
+            public float minDist;
+            public float maxDist;
+            public int rayIndex;
+        }
+
         public override void Raycast(Ray[] rays, HitInfo[] hits, float minDist, float maxDist, int count, uint rayMask, ref uint hitMask)
         {
-            Vector3 e1, e2;
-            HitInfo hitInfo = new HitInfo();
-            Ray ray, nextRay = rays[0];
-
-            // https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
-
+            Ray nextRay = rays[0];
+            State state = new State();
+            state.hitMask = 0;
+            state.hits = hits;
+            state.minDist = minDist;
+            state.maxDist = maxDist;
+            
             for (int i = 0; i < count; i++)
             {
-                ray = nextRay;
+                state.ray = nextRay;
 
                 int nIndex = count + 1;
                 if (nIndex < count - 1)
@@ -56,46 +79,53 @@ namespace PathTracer
                 if (!BitHelper.GetBit(ref rayMask, i))
                     continue;
 
-                for (int j = 0; j < this.triangleCount; j++)
+                state.rayIndex = i;
+                this.ocTree.Raycast(state.ray, this.raycastDelegate, ref state);
+            }
+
+            hitMask = state.hitMask;
+        }
+
+        private void Raycast(int triangleIndex, ref State state)
+        {
+            // https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
+            Vector3 e1, e2;
+            Vector3 p1 = this.p1[triangleIndex];
+            Vector3 p2 = this.p2[triangleIndex];
+            Vector3 p3 = this.p3[triangleIndex];
+
+            e1 = p2 - p1;
+            e2 = p3 - p1;
+            Vector3 h = Vector3.Cross(state.ray.direction, e2);
+            float a = Vector3.Dot(e1, h);
+            if (a > -Epsilon && a < Epsilon)
+                return;
+
+            float f = 1.0f / a;
+            Vector3 s = state.ray.origin - p1;
+            float u = f * Vector3.Dot(s, h);
+            if (u < 0 || u > 1)
+                return;
+
+            Vector3 q = Vector3.Cross(s, e1);
+            float v = f * Vector3.Dot(state.ray.direction, q);
+            if (v < 0 || (u + v) > 1)
+                return;
+
+            float t = f * Vector3.Dot(e2, q);
+            if (t > state.minDist && t <= state.maxDist)
+            {
+                state.hitInfo.distance = t;
+                state.hitInfo.material = this.material[triangleIndex];
+                state.hitInfo.normal = this.faceNormal[triangleIndex];
+                state.ray.GetPointOptimized(t, ref state.hitInfo.point);
+
+                if (BitHelper.GetBit(ref state.hitMask, state.rayIndex))
+                    HitInfo.ExchangeIfBetter(ref state.hits[state.rayIndex], state.hitInfo);
+                else
                 {
-                    Vector3 p1 = this.p1[j];
-                    Vector3 p2 = this.p2[j];
-                    Vector3 p3 = this.p3[j];
-                    
-                    e1 = p2 - p1;
-                    e2 = p3 - p1;
-                    Vector3 h = Vector3.Cross(ray.direction, e2);
-                    float a = Vector3.Dot(e1, h);
-                    if (a > -Epsilon && a < Epsilon)
-                        continue;
-
-                    float f = 1.0f / a;
-                    Vector3 s = ray.origin - p1;
-                    float u = f * Vector3.Dot(s, h);
-                    if (u < 0 || u > 1)
-                        continue;
-
-                    Vector3 q = Vector3.Cross(s, e1);
-                    float v = f * Vector3.Dot(ray.direction, q);
-                    if (v < 0 || (u + v) > 1)
-                        continue;
-
-                    float t = f * Vector3.Dot(e2, q);
-                    if (t > Epsilon)
-                    {
-                        hitInfo.distance = t;
-                        hitInfo.material = this.material[j];
-                        hitInfo.normal = this.faceNormal[j];
-                        ray.GetPointOptimized(t, ref hitInfo.point);
-                        
-                        if (BitHelper.GetBit(ref hitMask, i))
-                            HitInfo.ExchangeIfBetter(ref hits[i], hitInfo);
-                        else
-                        {
-                            hits[i] = hitInfo;
-                            BitHelper.SetBit(ref hitMask, i);
-                        }
-                    }
+                    state.hits[state.rayIndex] = state.hitInfo;
+                    BitHelper.SetBit(ref state.hitMask, state.rayIndex);
                 }
             }
         }
@@ -122,6 +152,25 @@ namespace PathTracer
             Vector3 side1 = p2 - p1;
             Vector3 side2 = p3 - p1;
             this.faceNormal = Vector3.Normalize(Vector3.Cross(side1, side2));
+        }
+
+        public Triangle(Vector3 p1, Vector3 p2, Vector3 p3, Vector3 n1, Vector3 n2, Vector3 n3, Material material)
+        {
+            this.p1 = p1;
+            this.p2 = p2;
+            this.p3 = p3;
+
+            this.material = material;
+
+            this.faceNormal = Vector3.Lerp(Vector3.Lerp(n1, n2, .5f), n3, .5f);
+        }
+
+        public BoundingBox CalcBoundingBox()
+        {
+            BoundingBox boundingBox = new BoundingBox();
+            boundingBox.min = Vector3.Min(Vector3.Min(p1, p2), p3);
+            boundingBox.max = Vector3.Max(Vector3.Max(p1, p2), p3);
+            return boundingBox;
         }
     }
 }

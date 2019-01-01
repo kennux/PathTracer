@@ -26,6 +26,7 @@
     <Compile Include="..\PathTracer\Mathf.cs" Link="Mathf.cs" />
     <Compile Include="..\PathTracer\MathUtil.cs" Link="MathUtil.cs" />
     <Compile Include="..\PathTracer\MetalMaterial.cs" Link="MetalMaterial.cs" />
+    <Compile Include="..\PathTracer\Octree.cs" Link="Octree.cs" />
     <Compile Include="..\PathTracer\Ray.cs" Link="Ray.cs" />
     <Compile Include="..\PathTracer\Scene.cs" Link="Scene.cs" />
     <Compile Include="..\PathTracer\Sphere.cs" Link="Sphere.cs" />

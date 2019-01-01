@@ -13,13 +13,52 @@ namespace PathTracer
     /// </summary>
     public struct BoundingBox
     {
+        public static void Subdivide(BoundingBox boundingBox, out BoundingBox frontBottomLeft, out BoundingBox frontBottomRight, out BoundingBox frontTopLeft,
+            out BoundingBox frontTopRight, out BoundingBox backBottomLeft, out BoundingBox backBottomRight, out BoundingBox backTopLeft, out BoundingBox backTopRight)
+        {
+            Vector3 size = boundingBox.max - boundingBox.min;
+            Vector3 sizeHalf = size * .5f;
+
+            Vector3 _frontBottomLeft = boundingBox.min;
+            Vector3 _frontBottomRight = boundingBox.min + new Vector3(sizeHalf.X, 0, 0);
+            Vector3 _frontTopLeft = boundingBox.min + new Vector3(0, sizeHalf.Y, 0);
+            Vector3 _frontTopRight = boundingBox.min + new Vector3(sizeHalf.X, sizeHalf.Y, 0);
+            Vector3 _backBottomLeft = boundingBox.min + new Vector3(0, 0, sizeHalf.Z);
+            Vector3 _backBottomRight = boundingBox.min + new Vector3(sizeHalf.X, 0, sizeHalf.Z);
+            Vector3 _backTopLeft = boundingBox.min + new Vector3(0, sizeHalf.Y, sizeHalf.Z);
+            Vector3 _backTopRight = boundingBox.min + sizeHalf;
+
+            frontBottomLeft = new BoundingBox(_frontBottomLeft, _frontBottomLeft + sizeHalf);
+            frontBottomRight = new BoundingBox(_frontBottomRight, _frontBottomRight + sizeHalf);
+            frontTopLeft = new BoundingBox(_frontTopLeft, _frontTopLeft + sizeHalf);
+            frontTopRight = new BoundingBox(_frontTopRight, _frontTopRight + sizeHalf);
+            backBottomLeft = new BoundingBox(_backBottomLeft, _backBottomLeft + sizeHalf);
+            backBottomRight = new BoundingBox(_backBottomRight, _backBottomRight + sizeHalf);
+            backTopLeft = new BoundingBox(_backTopLeft, _backTopLeft + sizeHalf);
+            backTopRight = new BoundingBox(_backTopRight, _backTopRight + sizeHalf);
+
+        }
         public Vector3 min;
         public Vector3 max;
 
-        public BoundingBox(Vector3 center, Vector3 size)
+        public BoundingBox(Vector3 min, Vector3 max)
         {
-            this.min = center - (size / 2f);
-            this.max = center + (size / 2f);
+            this.min = min;
+            this.max = max;
+        }
+
+        public bool Overlaps(BoundingBox box)
+        {
+            if (this.min.X > box.max.X || box.min.X > this.max.X)
+                return false;
+
+            if (this.min.Y > box.max.Y || box.min.Y > this.max.Y)
+                return false;
+
+            if (this.min.Z > box.max.Z || box.min.Z > this.max.Z)
+                return false;
+
+            return true;
         }
 
         public bool RayIntersection(ref Ray r)

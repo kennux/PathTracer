@@ -40,7 +40,10 @@ namespace PathTracer.Test
                 Vector3 p2 = positions[face.p2];
                 Vector3 p3 = positions[face.p3];
 
-                triangles.Add(new Triangle(p1, p2, p3, null));
+                if (face.n1 != -1)
+                    triangles.Add(new Triangle(p1, p2, p3, normals[face.n1], normals[face.n2], normals[face.n3], null));
+                else
+                    triangles.Add(new Triangle(p1, p2, p3, null));
             }
         }
 
