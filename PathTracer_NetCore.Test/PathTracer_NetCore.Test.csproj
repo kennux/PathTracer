@@ -9,11 +9,28 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\PathTracer.Test\Program.cs" Link="Program.cs" />
+    <Compile Include="..\PathTracer.Test\WavefrontLoader.cs" Link="WavefrontLoader.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="System.Drawing.Common" Version="4.5.1" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\PathTracer_NetCore\PathTracer_NetCore.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Resources\Teapot\default.mtl">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Resources\Teapot\default.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Resources\Teapot\teapot.obj">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

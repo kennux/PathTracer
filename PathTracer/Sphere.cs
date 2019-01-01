@@ -35,15 +35,13 @@ namespace PathTracer
             }
         }
 
-        public override void Raycast(Ray[] rays, HitInfo[] hits, float minDist, float maxDist, int count, uint rayMask, ref uint hitMask, ref long rayCounter)
+        public override void Raycast(Ray[] rays, HitInfo[] hits, float minDist, float maxDist, int count, uint rayMask, ref uint hitMask)
         {
-            hitMask = 0;
             for (int i = 0; i < count; i++)
             {
                 if (!BitHelper.GetBit(ref rayMask, i))
                     continue;
-
-                rayCounter++;
+                
                 Ray ray = rays[i];
                 HitInfo hitInfo = new HitInfo();
                 for (int j = 0; j < this.sphereCount; j++)

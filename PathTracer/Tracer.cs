@@ -51,7 +51,7 @@ namespace PathTracer
             runtimeParams.invHeight = 1.0f / parameters.height;
             runtimeParams.invSamplesPerPixel = 1.0f / parameters.samplesPerPixel;
             runtimeParams.batchSize = 32;
-            runtimeParams.sampleBatches = (int)Mathf.Ceiling(parameters.samplesPerPixel / runtimeParams.batchSize);
+            runtimeParams.sampleBatches = (int)Mathf.Ceiling(parameters.samplesPerPixel / (float)runtimeParams.batchSize);
 
             List<TileTraceParameters> traceTiles = new List<TileTraceParameters>();
             for (int y = 0; y < parameters.height; y+= parameters.traceTileDimension)

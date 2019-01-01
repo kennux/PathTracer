@@ -111,6 +111,9 @@
     <Compile Include="..\PathTracer\Tracer.cs">
       <Link>Tracer.cs</Link>
     </Compile>
+    <Compile Include="..\PathTracer\Triangle.cs">
+      <Link>Triangle.cs</Link>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

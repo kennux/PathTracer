@@ -14,7 +14,7 @@ namespace PathTracer
     public interface ISceneHitSystem
     {
         void PrepareForRendering();
-        void Raycast(Ray[] rays, HitInfo[] hits, float minDist, float maxDist, int count, uint rayMask, ref uint hitMask, ref long rayCounter);
+        void Raycast(Ray[] rays, HitInfo[] hits, float minDist, float maxDist, int count, uint rayMask, ref uint hitMask);
     }
 
     public abstract class SceneHitSystem<TObject> : ISceneHitSystem where TObject : ISceneObject
@@ -28,7 +28,7 @@ namespace PathTracer
         }
 
         public virtual void PrepareForRendering() { }
-        public abstract void Raycast(Ray[] rays, HitInfo[] hits, float minDist, float maxDist, int count, uint rayMask, ref uint hitMask, ref long rayCounter);
+        public abstract void Raycast(Ray[] rays, HitInfo[] hits, float minDist, float maxDist, int count, uint rayMask, ref uint hitMask);
     }
 
     public class Scene
@@ -36,9 +36,23 @@ namespace PathTracer
         private List<ISceneHitSystem> hitSystems = new List<ISceneHitSystem>();
         private ISceneHitSystem[] _hitSystems;
 
-        public void Add(ISceneHitSystem hitSystem)
+        public TSystem GetOrCreate<TSystem>() where TSystem : class, ISceneHitSystem, new()
         {
-            this.hitSystems.Add(hitSystem);
+            TSystem sys = null;
+            foreach (var hitSystem in hitSystems)
+            {
+                sys = hitSystem as TSystem;
+                if (sys != null)
+                    break;
+            }
+
+            if (sys == null)
+            {
+                sys = new TSystem();
+                this.hitSystems.Add(sys);
+            }
+
+            return sys;
         }
 
         public void PrepareForRendering()
@@ -50,12 +64,17 @@ namespace PathTracer
 
         public void Raycast(Ray[] rays, HitInfo[] hits, float minDist, float maxDist, int count, uint rayMask, ref uint hitMask, ref long rayCounter)
         {
+            if (count == 0)
+                return;
+
             if (count > 32)
                 throw new InvalidOperationException("Can only operate on batches of <= 32 rays!");
 
+            hitMask = 0;
+            rayCounter += BitHelper.NumberOfSetBits(rayMask);
             int sc = _hitSystems.Length;
             for (int i = 0; i < sc; i++)
-                _hitSystems[i].Raycast(rays, hits, minDist, maxDist, count, rayMask, ref hitMask, ref rayCounter);
+                _hitSystems[i].Raycast(rays, hits, minDist, maxDist, count, rayMask, ref hitMask);
         }
     }
 }

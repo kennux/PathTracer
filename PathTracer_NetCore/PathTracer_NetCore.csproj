@@ -31,6 +31,7 @@
     <Compile Include="..\PathTracer\Sphere.cs" Link="Sphere.cs" />
     <Compile Include="..\PathTracer\TraceParams.cs" Link="TraceParams.cs" />
     <Compile Include="..\PathTracer\Tracer.cs" Link="Tracer.cs" />
+    <Compile Include="..\PathTracer\Triangle.cs" Link="Triangle.cs" />
   </ItemGroup>
 
 </Project>

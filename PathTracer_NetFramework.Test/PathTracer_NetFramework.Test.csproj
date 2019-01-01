@@ -66,18 +66,33 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Program.cs" />
+    <Compile Include="..\PathTracer.Test\Program.cs">
+      <Link>Program.cs</Link>
+    </Compile>
+    <Compile Include="..\PathTracer.Test\WavefrontLoader.cs">
+      <Link>WavefrontLoader.cs</Link>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="Resources\Teapot\default.mtl">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Resources\Teapot\teapot.obj">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PathTracer_NetFramework\PathTracer_NetFramework.csproj">
       <Project>{c75ffb1e-8ae2-4555-bc29-94eb30425813}</Project>
       <Name>PathTracer_NetFramework</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Resources\Teapot\default.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
