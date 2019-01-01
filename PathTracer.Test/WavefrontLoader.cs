@@ -25,7 +25,7 @@ namespace PathTracer.Test
             public int n3;
         }
 
-        public static void Load(string content, Matrix4x4 TRS, ref List<Triangle> triangles)
+        public static void Load(string content, ref List<Triangle> triangles)
         {
             List<Vector3> positions, normals;
             List<Face> faces;
@@ -36,9 +36,9 @@ namespace PathTracer.Test
 
             foreach (var face in faces)
             {
-                Vector3 p1 = Vector3.Transform(positions[face.p1], TRS);
-                Vector3 p2 = Vector3.Transform(positions[face.p2], TRS);
-                Vector3 p3 = Vector3.Transform(positions[face.p3], TRS);
+                Vector3 p1 = positions[face.p1];
+                Vector3 p2 = positions[face.p2];
+                Vector3 p3 = positions[face.p3];
 
                 triangles.Add(new Triangle(p1, p2, p3, null));
             }
@@ -50,7 +50,7 @@ namespace PathTracer.Test
             normals = new List<Vector3>();
             faces = new List<Face>();
 
-            string[] lines = content.Split(Environment.NewLine);
+            string[] lines = content.Split('\n');
             foreach (var line in lines)
             {
                 string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -71,9 +71,9 @@ namespace PathTracer.Test
                         break;
                     case "f":
                         {
-                            string[] faceParts1 = parts[1].Split("/");
-                            string[] faceParts2 = parts[2].Split("/");
-                            string[] faceParts3 = parts[3].Split("/");
+                            string[] faceParts1 = parts[1].Split('/');
+                            string[] faceParts2 = parts[2].Split('/');
+                            string[] faceParts3 = parts[3].Split('/');
 
                             if (faceParts1.Length != faceParts2.Length || faceParts2.Length != faceParts3.Length)
                                 throw new FormatException("Face has different channel counts");
@@ -100,6 +100,16 @@ namespace PathTracer.Test
                             }
 
                             faces.Add(face);
+                        }
+                        break;
+                    case "vt":
+                        {
+
+                        }
+                        break;
+                    default:
+                        {
+                            // Console.WriteLine("Unknown " + line);
                         }
                         break;
                 }

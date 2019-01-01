@@ -13,7 +13,7 @@ namespace PathTracer.Test
 {
     class Program
     {
-        private static Scene SimpleSphereScene(out Stopwatch stopwatch)
+        private static Scene SimpleSphereScene(int width, int height, out Stopwatch stopwatch, out Camera camera)
         {
             stopwatch = Stopwatch.StartNew();
 
@@ -37,56 +37,76 @@ namespace PathTracer.Test
 
             scene.PrepareForRendering();
             stopwatch.Stop();
+            camera = new Camera(new Vector3(0, 2, 3), new Vector3(0, 0, 0), new Vector3(0, 1, 0), 70, (float)width / (float)height, 0.025f, 3f);
 
             return scene;
         }
 
-        private static Scene TeapotScene(out Stopwatch stopwatch)
+        private static Scene TeapotScene(int width, int height, out Stopwatch stopwatch, out Camera camera)
         {
             stopwatch = Stopwatch.StartNew();
+
+            Sphere[] spheres = new Sphere[]
+            {
+                new Sphere(new Vector3(0,-100.5f,-1), 100, new LambertianMaterial(new Vector3(.8f, .8f, .8f))),
+                new Sphere(new Vector3(2,0,-1), 0.5f, new LambertianMaterial(new Vector3(0.8f, 0.4f, 0.4f))),
+                new Sphere(new Vector3(0,0,-1), 0.5f, new LambertianMaterial(new Vector3(0.4f, 0.8f, 0.4f))),
+                new Sphere(new Vector3(-2,0,-1), 0.5f, new MetalMaterial(new Vector3(.4f, .4f, .8f), 0)),
+                new Sphere(new Vector3(2,0,1), 0.5f, new MetalMaterial(new Vector3(.4f, .8f, .4f), 0)),
+                new Sphere(new Vector3(0,0,1), 0.5f, new MetalMaterial(new Vector3(.4f, .8f, .4f), 0.2f)),
+                new Sphere(new Vector3(-2,0,1), 0.5f, new MetalMaterial(new Vector3(.4f, .8f, .4f), 0.6f)),
+                new Sphere(new Vector3(0.5f,1.25f,0.5f), 0.5f, new DielectricMaterial(1.5f)),
+                //new Sphere(new Vector3(-1.5f,1.5f,0f), 0.3f, new LambertianMaterial(new Vector3(.8f, .6f, .2f)))
+            };
 
             Scene scene = new Scene();
             TriangleHitSystem triangleHitSystem = scene.GetOrCreate<TriangleHitSystem>();
             SceneSphereHitSystem sphereHitSystem = scene.GetOrCreate<SceneSphereHitSystem>();
-
-            sphereHitSystem.Add(new Sphere(new Vector3(0, -100.5f, -1), 100, new LambertianMaterial(new Vector3(.8f, .8f, .8f))));
+            for (int i = 0; i < spheres.Length; i++)
+                sphereHitSystem.Add(spheres[i]);
 
             List<Triangle> triangles = new List<Triangle>();
-            Matrix4x4 TRS = Matrix4x4.CreateScale(0.01f);
-            TRS.Translation = new Vector3(0, 1f, 1f);
-            WavefrontLoader.Load(File.ReadAllText(@"Resources/Teapot/teapot.obj"), TRS, ref triangles);
+            WavefrontLoader.Load(File.ReadAllText(@"Resources/Teapot/teapot.obj"), ref triangles);
 
-            var mat = new MetalMaterial(new Vector3(.1f, .1f, .1f), 1f);
+            var mat = new MetalMaterial(new Vector3(.4f, .8f, .4f), 0);
             for (int i = 0; i < triangles.Count; i++)
             {
                 var tri = triangles[i];
+                tri.p1 *= .01f; // Scale down
+                tri.p2 *= .01f; // Scale down
+                tri.p3 *= .01f; // Scale down
+                tri.p1 += new Vector3(-1.5f, 1.25f, 0f); // Translate
+                tri.p2 += new Vector3(-1.5f, 1.25f, 0f); // Translate
+                tri.p3 += new Vector3(-1.5f, 1.25f, 0f); // Translate
+
                 tri.material = mat;
 
                 triangleHitSystem.Add(tri);
             }
 
+            // triangleHitSystem.Add(new Triangle(new Vector3(-2, 0, 1), new Vector3(0, 1, 1), new Vector3(2, 0, 1), mat));
+
             scene.PrepareForRendering();
             stopwatch.Stop();
-            Console.WriteLine("Teapot loaded!");
+            camera = new Camera(new Vector3(0, 2, 3), new Vector3(0, 0, 0), new Vector3(0, 1, 0), 70, (float)width / (float)height, 0.025f, 3f);
 
             return scene;
         }
 
-        private static TraceResult TraceTest(int width, int height, Scene scene, out Stopwatch stopwatch)
+        private static TraceResult TraceTest(int width, int height, Scene scene, Camera camera, out Stopwatch stopwatch)
         {
             stopwatch = Stopwatch.StartNew();
-            Camera camera = new Camera(new Vector3(0, 2, 3), new Vector3(0, 0, 0), new Vector3(0, 1, 0), 70, (float)width / (float)height, 0.025f, 3f);
             TraceParams parameters = new TraceParams()
             {
                 ambientLight = new Vector3(.75f, .75f, .75f),
                 camera = camera,
                 height = height,
                 width = width,
-                samplesPerPixel = 128,
+                samplesPerPixel = 32,
                 scene = scene,
                 maxBounces = 8,
                 maxDepth = float.PositiveInfinity,
-                traceTileDimension = 32,
+                traceTileDimension = 16,
                 multithreading = true
             };
             var result = Tracer.Render(parameters, (count, processed) =>
@@ -101,13 +121,14 @@ namespace PathTracer.Test
 
         static void Main(string[] args)
         {
-            int width = 320;
-            int height = 240;
+            int width = 640;
+            int height = 480;
             Stopwatch swInit, swRender;
+            Camera camera;
 
-            // var scene = SimpleSphereScene(out swInit);
-            var scene = TeapotScene(out swInit);
-            var result = TraceTest(width, height, scene, out swRender);
+            // var scene = SimpleSphereScene(width, height, out swInit, out camera);
+            var scene = TeapotScene(width, height, out swInit, out camera);
+            var result = TraceTest(width, height, scene, camera, out swRender);
 
             double mRays = (result.rayCount / 1000000d);
             Console.WriteLine("RayCount: " + mRays.ToString("0.00") + " MRays | " + swRender.Elapsed.TotalMilliseconds.ToString("0.000") + " ms, Init: " + swInit.Elapsed.TotalMilliseconds.ToString("0.000") + " ms | " + (mRays / swRender.Elapsed.TotalSeconds).ToString("0.00") + " MRays/s");

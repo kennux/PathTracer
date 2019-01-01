@@ -35,13 +35,15 @@ namespace PathTracer
             }
         }
 
+        private const float Epsilon = float.Epsilon;
+
         public override void Raycast(Ray[] rays, HitInfo[] hits, float minDist, float maxDist, int count, uint rayMask, ref uint hitMask)
         {
             Vector3 e1, e2;
-            Vector3 p, q, t;
-            float det, invDet, u, v;
             HitInfo hitInfo = new HitInfo();
             Ray ray, nextRay = rays[0];
+
+            // https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
 
             for (int i = 0; i < count; i++)
             {
@@ -62,32 +64,30 @@ namespace PathTracer
                     
                     e1 = p2 - p1;
                     e2 = p3 - p1;
-                    p = Vector3.Cross(ray.direction, e2);
-                    det = Vector3.Dot(e1, p);
-                    
-                    if (det > -float.Epsilon && det < float.Epsilon) { continue; }
+                    Vector3 h = Vector3.Cross(ray.direction, e2);
+                    float a = Vector3.Dot(e1, h);
+                    if (a > -Epsilon && a < Epsilon)
+                        continue;
 
-                    invDet = 1.0f / det;
-                    t = ray.origin - p1;
-                    u = Vector3.Dot(t, p) * invDet;
+                    float f = 1.0f / a;
+                    Vector3 s = ray.origin - p1;
+                    float u = f * Vector3.Dot(s, h);
+                    if (u < 0 || u > 1)
+                        continue;
 
-                    //Check for ray hit
-                    if (u < 0 || u > 1) { continue; }
-                    
-                    q = Vector3.Cross(t, e1);
-                    v = Vector3.Dot(ray.direction, q) * invDet;
+                    Vector3 q = Vector3.Cross(s, e1);
+                    float v = f * Vector3.Dot(ray.direction, q);
+                    if (v < 0 || (u + v) > 1)
+                        continue;
 
-                    //Check for ray hit
-                    if (v < 0 || u + v > 1) { continue; }
-
-                    float distance = (Vector3.Dot(e2, q) * invDet);
-                    if (distance > float.Epsilon)
+                    float t = f * Vector3.Dot(e2, q);
+                    if (t > Epsilon)
                     {
-                        hitInfo.distance = distance;
+                        hitInfo.distance = t;
                         hitInfo.material = this.material[j];
-                        ray.GetPointOptimized(distance, ref hitInfo.point);
                         hitInfo.normal = this.faceNormal[j];
-
+                        ray.GetPointOptimized(t, ref hitInfo.point);
+                        
                         if (BitHelper.GetBit(ref hitMask, i))
                             HitInfo.ExchangeIfBetter(ref hits[i], hitInfo);
                         else

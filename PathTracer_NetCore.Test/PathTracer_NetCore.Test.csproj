@@ -33,4 +33,14 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Resources\Teapot\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\Resources\Teapot\teapot.obj" Link="Resources\Teapot\teapot.obj">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

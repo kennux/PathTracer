@@ -75,24 +75,17 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\Resources\Teapot\teapot.obj">
+      <Link>Resources\Teapot\teapot.obj</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="App.config" />
-    <None Include="Resources\Teapot\default.mtl">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Resources\Teapot\teapot.obj">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PathTracer_NetFramework\PathTracer_NetFramework.csproj">
       <Project>{c75ffb1e-8ae2-4555-bc29-94eb30425813}</Project>
       <Name>PathTracer_NetFramework</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="Resources\Teapot\default.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
