@@ -12,6 +12,11 @@ namespace PathTracer
         private Vector3[] p1;
         private Vector3[] p2;
         private Vector3[] p3;
+
+        private Vector3[] n1;
+        private Vector3[] n2;
+        private Vector3[] n3;
+
         private Vector3[] faceNormal;
         private Material[] material;
         private BoundingBox[] boundingBoxes;
@@ -25,6 +30,9 @@ namespace PathTracer
             this.p1 = new Vector3[this.triangleCount];
             this.p2 = new Vector3[this.triangleCount];
             this.p3 = new Vector3[this.triangleCount];
+            this.n1 = new Vector3[this.triangleCount];
+            this.n2 = new Vector3[this.triangleCount];
+            this.n3 = new Vector3[this.triangleCount];
             this.faceNormal = new Vector3[this.triangleCount];
             this.material = new Material[this.triangleCount];
             this.boundingBoxes = new BoundingBox[this.triangleCount];
@@ -34,6 +42,11 @@ namespace PathTracer
                 this.p1[i] = this.objects[i].p1;
                 this.p2[i] = this.objects[i].p2;
                 this.p3[i] = this.objects[i].p3;
+
+                this.n1[i] = this.objects[i].n1;
+                this.n2[i] = this.objects[i].n2;
+                this.n3[i] = this.objects[i].n3;
+
                 this.faceNormal[i] = this.objects[i].faceNormal;
                 this.material[i] = this.objects[i].material;
                 this.boundingBoxes[i] = this.objects[i].CalcBoundingBox();
@@ -89,7 +102,7 @@ namespace PathTracer
         private void Raycast(int triangleIndex, ref State state)
         {
             // https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
-            Vector3 e1, e2;
+            Vector3 e1, e2, e3;
             Vector3 p1 = this.p1[triangleIndex];
             Vector3 p2 = this.p2[triangleIndex];
             Vector3 p3 = this.p3[triangleIndex];
@@ -117,9 +130,21 @@ namespace PathTracer
             {
                 state.hitInfo.distance = t;
                 state.hitInfo.material = this.material[triangleIndex];
-                state.hitInfo.normal = this.faceNormal[triangleIndex];
                 state.ray.GetPointOptimized(t, ref state.hitInfo.point);
 
+                // Barycentric normal
+                Vector3 v0 = p2 - p1, v1 = p3 - p1, v2 = state.hitInfo.point - p1;
+                float d00 = Vector3.Dot(v0, v0);
+                float d01 = Vector3.Dot(v0, v1);
+                float d11 = Vector3.Dot(v1, v1);
+                float d20 = Vector3.Dot(v2, v0);
+                float d21 = Vector3.Dot(v2, v1);
+                float denom = d00 * d11 - d01 * d01;
+                float baryV = (d11 * d20 - d01 * d21) / denom;
+                float baryW = (d00 * d21 - d01 * d20) / denom;
+                float baryU = 1.0f - baryV - baryW;
+
+                state.hitInfo.normal = n1[triangleIndex] * baryU + n2[triangleIndex] * baryV + n3[triangleIndex] * baryW;
                 if (BitHelper.GetBit(ref state.hitMask, state.rayIndex))
                     HitInfo.ExchangeIfBetter(ref state.hits[state.rayIndex], state.hitInfo);
                 else
@@ -137,6 +162,10 @@ namespace PathTracer
         public Vector3 p2;
         public Vector3 p3;
 
+        public Vector3 n1;
+        public Vector3 n2;
+        public Vector3 n3;
+
         public Vector3 faceNormal;
 
         public Material material;
@@ -151,7 +180,7 @@ namespace PathTracer
 
             Vector3 side1 = p2 - p1;
             Vector3 side2 = p3 - p1;
-            this.faceNormal = Vector3.Normalize(Vector3.Cross(side1, side2));
+            this.faceNormal = this.n1 = this.n2 = this.n3 = Vector3.Normalize(Vector3.Cross(side1, side2));
         }
 
         public Triangle(Vector3 p1, Vector3 p2, Vector3 p3, Vector3 n1, Vector3 n2, Vector3 n3, Material material)
@@ -159,6 +188,10 @@ namespace PathTracer
             this.p1 = p1;
             this.p2 = p2;
             this.p3 = p3;
+
+            this.n1 = n1;
+            this.n2 = n2;
+            this.n3 = n3;
 
             this.material = material;
 
