@@ -47,6 +47,7 @@ namespace PathTracer.Test
             }
         }
 
+        private static char[] _seperator = new char[] { ' ' };
         public static void Load(string content, out List<Vector3> positions, out List<Vector3> normals, out List<Face> faces)
         {
             positions = new List<Vector3>();
@@ -56,7 +57,7 @@ namespace PathTracer.Test
             string[] lines = content.Split('\n');
             foreach (var line in lines)
             {
-                string[] parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                string[] parts = line.Split(_seperator, StringSplitOptions.RemoveEmptyEntries);
                 if (parts.Length == 0)
                     continue;
 

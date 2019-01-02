@@ -68,7 +68,8 @@ namespace PathTracer.Test
             List<Triangle> triangles = new List<Triangle>();
             WavefrontLoader.Load(File.ReadAllText(@"Resources/Teapot/teapot.obj"), ref triangles);
 
-            var mat = new MetalMaterial(new Vector3(.4f, .8f, .4f), 0);
+            var mat = new MetalMaterial(new Vector3(.25f, .25f, .25f), .4f);
+            // var mat = new DielectricMaterial(1.5f);
             for (int i = 0; i < triangles.Count; i++)
             {
                 var tri = triangles[i];
@@ -102,9 +103,9 @@ namespace PathTracer.Test
                 camera = camera,
                 height = height,
                 width = width,
-                samplesPerPixel = 1024,
+                samplesPerPixel = 32,
                 scene = scene,
-                maxBounces = 12,
+                maxBounces = 8,
                 maxDepth = float.PositiveInfinity,
                 traceTileDimension = 16,
                 multithreading = true

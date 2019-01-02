@@ -96,6 +96,9 @@
     <Compile Include="..\PathTracer\MetalMaterial.cs">
       <Link>MetalMaterial.cs</Link>
     </Compile>
+    <Compile Include="..\PathTracer\Octree.cs">
+      <Link>Octree.cs</Link>
+    </Compile>
     <Compile Include="..\PathTracer\Ray.cs">
       <Link>Ray.cs</Link>
     </Compile>
