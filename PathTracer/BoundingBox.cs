@@ -36,8 +36,16 @@ namespace PathTracer
             backBottomRight = new BoundingBox(_backBottomRight, _backBottomRight + sizeHalf);
             backTopLeft = new BoundingBox(_backTopLeft, _backTopLeft + sizeHalf);
             backTopRight = new BoundingBox(_backTopRight, _backTopRight + sizeHalf);
-
         }
+
+        public static BoundingBox FromSphere(Vector3 center, float radius)
+        {
+            Vector3 min = center - (Vector3.One * (radius / 2f));
+            Vector3 max = center + (Vector3.One * (radius / 2f));
+
+            return new BoundingBox(min, max);
+        }
+
         public Vector3 min;
         public Vector3 max;
         public Vector3 center;

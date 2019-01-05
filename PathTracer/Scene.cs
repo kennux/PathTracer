@@ -31,6 +31,69 @@ namespace PathTracer
         public abstract void Raycast(Ray[] rays, HitInfo[] hits, float minDist, float maxDist, int count, uint rayMask, ref uint hitMask);
     }
 
+    public abstract class OCTreeSceneHitSystem<TObject, TContainer> : SceneHitSystem<TObject> where TObject : ISceneObject where TContainer : ISoAContainer<TContainer>, new()
+    {
+        protected TContainer container;
+        protected OCTree<TContainer> ocTree = new OCTree<TContainer>();
+        protected OCTree<TContainer>.RaycastCallback<State> raycastDelegate;
+        protected int objectCount;
+
+        protected BoundingBox[] boundingBoxes;
+
+        public struct State
+        {
+            public Ray ray;
+            public uint hitMask;
+            public HitInfo hitInfo;
+            public HitInfo[] hits;
+            public float minDist;
+            public float maxDist;
+            public int rayIndex;
+        }
+
+        public override void PrepareForRendering()
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            this.objectCount = this.objects.Count;
+
+            this.container = PrepareData(out this.boundingBoxes);
+            this.raycastDelegate = Raycast;
+            this.ocTree.Bake(this.boundingBoxes, this.container);
+            sw.Stop();
+            Console.WriteLine(this.GetType().FullName + " prepared in " + sw.Elapsed.TotalMilliseconds + " ms");
+        }
+
+        public override void Raycast(Ray[] rays, HitInfo[] hits, float minDist, float maxDist, int count, uint rayMask, ref uint hitMask)
+        {
+            Ray nextRay = rays[0];
+            State state = new State();
+            state.hitMask = hitMask;
+            state.hits = hits;
+            state.minDist = minDist;
+            state.maxDist = maxDist;
+            
+            for (int i = 0; i < count; i++)
+            {
+                state.ray = nextRay;
+
+                int nIndex = count + 1;
+                if (nIndex < count - 1)
+                    nextRay = rays[i + 1];
+
+                if (!BitHelper.GetBit(ref rayMask, i))
+                    continue;
+
+                state.rayIndex = i;
+                this.ocTree.Raycast(state.ray, this.raycastDelegate, ref state);
+            }
+
+            hitMask = state.hitMask;
+        }
+        
+        protected abstract TContainer PrepareData(out BoundingBox[] boundingBoxes);
+        protected abstract void Raycast(ref State state, ref TContainer container);
+    }
+
     public interface ISceneLight
     {
 

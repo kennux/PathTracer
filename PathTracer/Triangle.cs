@@ -7,164 +7,58 @@ using System.Numerics;
 
 namespace PathTracer
 {
-    public class TriangleHitSystem : SceneHitSystem<Triangle>
+    public struct TriangleSoA : ISoAContainer<TriangleSoA>
     {
-        private Vector3[] p1;
-        private Vector3[] p2;
-        private Vector3[] p3;
+        public Vector3[] p1;
+        public Vector3[] p2;
+        public Vector3[] p3;
 
-        private Vector3[] n1;
-        private Vector3[] n2;
-        private Vector3[] n3;
+        public Vector3[] n1;
+        public Vector3[] n2;
+        public Vector3[] n3;
 
-        private Vector3[] faceNormal;
-        private Material[] material;
-        private BoundingBox[] boundingBoxes;
-        private int triangleCount;
-        private TriangleSoA container;
+        public Vector3[] faceNormal;
+        public Material[] material;
+        public BoundingBox[] boundingBoxes;
+        public int objectCount;
 
-        struct TriangleSoA : ISoAContainer<TriangleSoA>
+        public void CreateFromSubsetOfOther(TriangleSoA other, int[] indices)
         {
-            public Vector3[] p1;
-            public Vector3[] p2;
-            public Vector3[] p3;
+            this.p1 = new Vector3[indices.Length];
+            this.p2 = new Vector3[indices.Length];
+            this.p3 = new Vector3[indices.Length];
+            this.n1 = new Vector3[indices.Length];
+            this.n2 = new Vector3[indices.Length];
+            this.n3 = new Vector3[indices.Length];
+            this.faceNormal = new Vector3[indices.Length];
+            this.material = new Material[indices.Length];
+            this.boundingBoxes = new BoundingBox[indices.Length];
+            this.objectCount = indices.Length;
 
-            public Vector3[] n1;
-            public Vector3[] n2;
-            public Vector3[] n3;
-
-            public Vector3[] faceNormal;
-            public Material[] material;
-            public BoundingBox[] boundingBoxes;
-            public int triangleCount;
-
-            public void CreateFromSubsetOfOther(TriangleSoA other, int[] indices)
+            for (int i = 0; i < this.objectCount; i++)
             {
-                this.p1 = new Vector3[indices.Length];
-                this.p2 = new Vector3[indices.Length];
-                this.p3 = new Vector3[indices.Length];
-                this.n1 = new Vector3[indices.Length];
-                this.n2 = new Vector3[indices.Length];
-                this.n3 = new Vector3[indices.Length];
-                this.faceNormal = new Vector3[indices.Length];
-                this.material = new Material[indices.Length];
-                this.boundingBoxes = new BoundingBox[indices.Length];
-                this.triangleCount = indices.Length;
+                this.p1[i] = other.p1[indices[i]];
+                this.p2[i] = other.p2[indices[i]];
+                this.p3[i] = other.p3[indices[i]];
 
-                for (int i = 0; i < this.triangleCount; i++)
-                {
-                    this.p1[i] = other.p1[indices[i]];
-                    this.p2[i] = other.p2[indices[i]];
-                    this.p3[i] = other.p3[indices[i]];
+                this.n1[i] = other.n1[indices[i]];
+                this.n2[i] = other.n2[indices[i]];
+                this.n3[i] = other.n3[indices[i]];
 
-                    this.n1[i] = other.n1[indices[i]];
-                    this.n2[i] = other.n2[indices[i]];
-                    this.n3[i] = other.n3[indices[i]];
-
-                    this.faceNormal[i] = other.faceNormal[indices[i]];
-                    this.material[i] = other.material[indices[i]];
-                    this.boundingBoxes[i] = other.boundingBoxes[indices[i]];
-                }
+                this.faceNormal[i] = other.faceNormal[indices[i]];
+                this.material[i] = other.material[indices[i]];
+                this.boundingBoxes[i] = other.boundingBoxes[indices[i]];
             }
         }
+    }
 
-        private OCTree<TriangleSoA> ocTree = new OCTree<TriangleSoA>();
-
-        public override void PrepareForRendering()
-        {
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-            this.triangleCount = this.objects.Count;
-            this.p1 = new Vector3[this.triangleCount];
-            this.p2 = new Vector3[this.triangleCount];
-            this.p3 = new Vector3[this.triangleCount];
-            this.n1 = new Vector3[this.triangleCount];
-            this.n2 = new Vector3[this.triangleCount];
-            this.n3 = new Vector3[this.triangleCount];
-            this.faceNormal = new Vector3[this.triangleCount];
-            this.material = new Material[this.triangleCount];
-            this.boundingBoxes = new BoundingBox[this.triangleCount];
-
-            for (int i = 0; i < this.triangleCount; i++)
-            {
-                this.p1[i] = this.objects[i].p1;
-                this.p2[i] = this.objects[i].p2;
-                this.p3[i] = this.objects[i].p3;
-
-                this.n1[i] = this.objects[i].n1;
-                this.n2[i] = this.objects[i].n2;
-                this.n3[i] = this.objects[i].n3;
-
-                this.faceNormal[i] = this.objects[i].faceNormal;
-                this.material[i] = this.objects[i].material;
-                this.boundingBoxes[i] = this.objects[i].CalcBoundingBox();
-            }
-
-            this.container = new TriangleSoA()
-            {
-                boundingBoxes = boundingBoxes,
-                faceNormal = faceNormal,
-                material = material,
-                n1 = n1,
-                n2 = n2,
-                n3 = n3,
-                p1 = p1,
-                p2 = p2,
-                p3 = p3,
-                triangleCount = triangleCount
-            };
-
-            this.ocTree.Bake(this.boundingBoxes, this.container);
-            this.raycastDelegate = this.Raycast;
-            sw.Stop();
-            Console.WriteLine("Triangle hit system prepared in " + sw.Elapsed.TotalMilliseconds + " ms");
-        }
-
+    public class TriangleHitSystem : OCTreeSceneHitSystem<Triangle, TriangleSoA>
+    {
         private const float Epsilon = float.Epsilon;
 
-        private OCTree<TriangleSoA>.RaycastCallback<State> raycastDelegate;
-
-        // State
-        struct State
+        protected override void Raycast(ref State state, ref TriangleSoA container)
         {
-            public Ray ray;
-            public uint hitMask;
-            public HitInfo hitInfo;
-            public HitInfo[] hits;
-            public float minDist;
-            public float maxDist;
-            public int rayIndex;
-        }
-
-        public override void Raycast(Ray[] rays, HitInfo[] hits, float minDist, float maxDist, int count, uint rayMask, ref uint hitMask)
-        {
-            Ray nextRay = rays[0];
-            State state = new State();
-            state.hitMask = 0;
-            state.hits = hits;
-            state.minDist = minDist;
-            state.maxDist = maxDist;
-            
-            for (int i = 0; i < count; i++)
-            {
-                state.ray = nextRay;
-
-                int nIndex = count + 1;
-                if (nIndex < count - 1)
-                    nextRay = rays[i + 1];
-
-                if (!BitHelper.GetBit(ref rayMask, i))
-                    continue;
-
-                state.rayIndex = i;
-                this.ocTree.Raycast(state.ray, this.raycastDelegate, ref state);
-            }
-
-            hitMask = state.hitMask;
-        }
-
-        private void Raycast(ref State state, ref TriangleSoA container)
-        {
-            for (int i = 0; i < container.triangleCount; i++)
+            for (int i = 0; i < container.objectCount; i++)
             {
                 // https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
                 Vector3 e1, e2, e3;
@@ -219,6 +113,39 @@ namespace PathTracer
                     }
                 }
             }
+        }
+
+        protected override TriangleSoA PrepareData(out BoundingBox[] boundingBoxes)
+        {
+            TriangleSoA container = new TriangleSoA();
+
+            container.p1 = new Vector3[this.objectCount];
+            container.p2 = new Vector3[this.objectCount];
+            container.p3 = new Vector3[this.objectCount];
+            container.n1 = new Vector3[this.objectCount];
+            container.n2 = new Vector3[this.objectCount];
+            container.n3 = new Vector3[this.objectCount];
+            container.faceNormal = new Vector3[this.objectCount];
+            container.material = new Material[this.objectCount];
+            container.boundingBoxes = new BoundingBox[this.objectCount];
+
+            for (int i = 0; i < this.objectCount; i++)
+            {
+                container.p1[i] = this.objects[i].p1;
+                container.p2[i] = this.objects[i].p2;
+                container.p3[i] = this.objects[i].p3;
+
+                container.n1[i] = this.objects[i].n1;
+                container.n2[i] = this.objects[i].n2;
+                container.n3[i] = this.objects[i].n3;
+
+                container.faceNormal[i] = this.objects[i].faceNormal;
+                container.material[i] = this.objects[i].material;
+                container.boundingBoxes[i] = this.objects[i].CalcBoundingBox();
+            }
+
+            boundingBoxes = container.boundingBoxes;
+            return container;
         }
     }
 
