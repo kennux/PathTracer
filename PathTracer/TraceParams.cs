@@ -20,7 +20,8 @@ namespace PathTracer
         public int traceTileDimension;
         public float maxDepth;
         public int maxBounces;
-        public bool multithreading;
+
+        public ITracingProcessor tracingProcessor;
     }
 
     public struct TraceResult

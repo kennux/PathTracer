@@ -108,7 +108,7 @@ namespace PathTracer.Test
                 maxBounces = 6,
                 maxDepth = float.PositiveInfinity,
                 traceTileDimension = 8,
-                multithreading = true
+                tracingProcessor = TracingProcessors<MultithreadedCPUProcessor>.instance
             };
             var result = Tracer.Render(parameters, (count, processed) =>
             {

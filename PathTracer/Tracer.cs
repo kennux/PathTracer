@@ -9,30 +9,101 @@ using System.Threading;
 
 namespace PathTracer
 {
+    public interface ITracingProcessor
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns>Amount of rays cast while tracing</returns>
+        void Trace(List<TileTraceParameters> traceTiles, ref TraceResult result, ProgressReportDelegate progressReport = null);
+    }
+
+    public static class TracingProcessors<T> where T : class, ITracingProcessor, new()
+    {
+        public static T instance
+        {
+            get
+            {
+                if (ReferenceEquals(_instance, null))
+                    _instance = new T();
+                return _instance;
+            }
+        }
+        private static T _instance;
+
+    }
+
+    public class SinglethreadedCPUProcessor : ITracingProcessor
+    {
+        public void Trace(List<TileTraceParameters> traceTiles, ref TraceResult result, ProgressReportDelegate progressReport = null)
+        {
+            long rc = 0;
+            for (int i = 0; i < traceTiles.Count; i++)
+            {
+                Tracer.TraceTile(traceTiles[i], result.backbuffer, out rc);
+                progressReport?.Invoke(traceTiles.Count, i);
+                result.rayCount += rc;
+            }
+        }
+    }
+
+    public class MultithreadedCPUProcessor : ITracingProcessor
+    {
+        public void Trace(List<TileTraceParameters> traceTiles, ref TraceResult result, ProgressReportDelegate progressReport = null)
+        {
+            AutoResetEvent evt = new AutoResetEvent(false);
+
+            float[] backbuffer = result.backbuffer;
+            long[] rayCounts = new long[traceTiles.Count];
+            int tilesProcessed = 0;
+            int c = traceTiles.Count;
+            for (int i = 0; i < c; i++)
+            {
+                int j = i; // Move to local scope for lambda
+                var tt = traceTiles[i];
+                ThreadPool.QueueUserWorkItem(_ =>
+                {
+                    Tracer.TraceTile(tt, backbuffer, out rayCounts[j]);
+                    int processed = Interlocked.Increment(ref tilesProcessed);
+
+                    progressReport?.Invoke(traceTiles.Count, processed);
+                    if (processed == traceTiles.Count)
+                        evt.Set();
+                });
+            }
+
+            evt.WaitOne();
+            result.rayCount = 0;
+            for (int i = 0; i < rayCounts.Length; i++)
+                result.rayCount += rayCounts[i];
+        }
+    }
+
+    public struct TileTraceParameters
+    {
+        public TraceParams parameters;
+        public TraceRuntimeParams runtimeParams;
+
+        public int xStart;
+        public int yStart;
+        public int xEnd;
+        public int yEnd;
+    }
+
+    public struct TraceRuntimeParams
+    {
+        public float invWidth;
+        public float invHeight;
+        public float invSamplesPerPixel;
+
+        public int sampleBatches;
+        public int batchSize;
+    }
+
+    public delegate void ProgressReportDelegate(int tileCount, int tilesProcessed);
+
     public static class Tracer
     {
-        struct TileTraceParameters
-        {
-            public TraceParams parameters;
-            public TraceRuntimeParams runtimeParams;
-
-            public int xStart;
-            public int yStart;
-            public int xEnd;
-            public int yEnd;
-        }
-
-        struct TraceRuntimeParams
-        {
-            public float invWidth;
-            public float invHeight;
-            public float invSamplesPerPixel;
-
-            public int sampleBatches;
-            public int batchSize;
-        }
-
-        public delegate void ProgressReportDelegate(int tileCount, int tilesProcessed);
 
         public static TraceResult Render(TraceParams parameters, ProgressReportDelegate progressReport = null, float[] backbuffer = null)
         {
@@ -70,45 +141,11 @@ namespace PathTracer
                     traceTiles.Add(tt);
                 }
 
-            if (parameters.multithreading)
-            {
-                AutoResetEvent evt = new AutoResetEvent(false);
-
-                int tilesProcessed = 0;
-                int c = traceTiles.Count;
-                for (int i = 0; i < c; i++)
-                {
-                    var tt = traceTiles[i];
-                    ThreadPool.QueueUserWorkItem(_ =>
-                    {
-                        long rc = 0;
-                        TraceTile(tt, backbuffer, out rc);
-                        Interlocked.Add(ref result.rayCount, rc);
-                        int processed = Interlocked.Increment(ref tilesProcessed);
-
-                        progressReport?.Invoke(traceTiles.Count, processed);
-                        if (processed == traceTiles.Count)
-                            evt.Set();
-                    });
-                }
-
-                evt.WaitOne();
-            }
-            else
-            {
-                long rc = 0;
-                for (int i = 0; i < traceTiles.Count; i++)
-                {
-                    TraceTile(traceTiles[i], backbuffer, out rc);
-                    progressReport?.Invoke(traceTiles.Count, i);
-                    result.rayCount += rc;
-                }
-            }
-
+            parameters.tracingProcessor.Trace(traceTiles, ref result, progressReport);
             return result;
         }
 
-        private static void TraceTile(TileTraceParameters tile, float[] backbuffer, out long rayCount)
+        public static void TraceTile(TileTraceParameters tile, float[] backbuffer, out long rayCount)
         {
             Ray[] rays = new Ray[tile.runtimeParams.batchSize];
             HitInfo[] hits = new HitInfo[tile.runtimeParams.batchSize];
