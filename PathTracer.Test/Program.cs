@@ -31,7 +31,7 @@ namespace PathTracer.Test
             };
 
             Scene scene = new Scene();
-            SceneSphereHitSystem sphereHitSystem = scene.GetOrCreate<SceneSphereHitSystem>();
+            SceneSphereHitSystem sphereHitSystem = scene.GetOrCreateHitSystem<SceneSphereHitSystem>();
             for (int i = 0; i < spheres.Length; i++)
                 sphereHitSystem.Add(spheres[i]);
 
@@ -60,8 +60,8 @@ namespace PathTracer.Test
             };
 
             Scene scene = new Scene();
-            TriangleHitSystem triangleHitSystem = scene.GetOrCreate<TriangleHitSystem>();
-            SceneSphereHitSystem sphereHitSystem = scene.GetOrCreate<SceneSphereHitSystem>();
+            TriangleHitSystem triangleHitSystem = scene.GetOrCreateHitSystem<TriangleHitSystem>();
+            SceneSphereHitSystem sphereHitSystem = scene.GetOrCreateHitSystem<SceneSphereHitSystem>();
             for (int i = 0; i < spheres.Length; i++)
                 sphereHitSystem.Add(spheres[i]);
 
@@ -122,8 +122,8 @@ namespace PathTracer.Test
 
         static void Main(string[] args)
         {
-            int width = 1920;
-            int height = 1080;
+            int width = 640;
+            int height = 480;
             Stopwatch swInit, swRender;
             Camera camera;
 

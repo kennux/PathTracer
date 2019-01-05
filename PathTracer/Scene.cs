@@ -108,7 +108,7 @@ namespace PathTracer
             for (int i = 0; i < _hitSystems.Length; i++)
                 _hitSystems[i].PrepareForRendering();
             for (int i = 0; i < _lightSystems.Length; i++)
-                _lightSystems[i].PrepareForRendering();
+                _lightSystems[i].PrepareForRendering(this);
         }
 
         public void Raycast(Ray[] rays, HitInfo[] hits, float minDist, float maxDist, int count, uint rayMask, ref uint hitMask, ref long rayCounter)

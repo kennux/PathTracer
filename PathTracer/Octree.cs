@@ -7,15 +7,21 @@ using System.Numerics;
 
 namespace PathTracer
 {
-    public class OCTree
+    public interface ISoAContainer<T> where T : ISoAContainer<T>
+    {
+        void CreateFromSubsetOfOther(T other, int[] indices);
+    }
+
+    public class OCTree<T> where T : ISoAContainer<T>, new()
     {
         public class Bucket
         {
             public BoundingBox boundingBox;
             public int[] indices;
+            public T container;
 
             private Bucket parent;
-            private OCTree tree;
+            private OCTree<T> tree;
 
             public bool isSubdivided;
             public Bucket frontBottomLeft; // Min
@@ -28,7 +34,7 @@ namespace PathTracer
             public Bucket backTopRight; // Max
             public int depth = 0;
 
-            public Bucket(OCTree tree, BoundingBox boundingBox, Bucket parent = null)
+            public Bucket(OCTree<T> tree, BoundingBox boundingBox, Bucket parent = null)
             {
                 this.tree = tree;
                 this.boundingBox = boundingBox;
@@ -90,46 +96,47 @@ namespace PathTracer
 
                 this.indices = tmpList.ToArray();
                 this.depth = this.parent.depth + 1;
+                this.container = new T();
+                this.container.CreateFromSubsetOfOther(this.tree.root.container, this.indices);
                 Subdivide();
             }
 
-            public void Raycast<T>(Ray ray, RaycastCallback<T> objectCallback, ref T data)
+            public void Raycast<TState>(Ray ray, RaycastCallback<TState> objectCallback, ref TState stateData)
             {
                 if (!this.boundingBox.RayIntersection(ref ray))
                     return;
 
                 if (!this.isSubdivided)
                 {
-                    for (int i = 0; i < this.indices.Length; i++)
-                        objectCallback(this.indices[i], ref data);
+                    objectCallback(ref stateData, ref this.container);
                     return;
                 }
 
                 // Propagate
-                this.frontBottomLeft.Raycast(ray, objectCallback, ref data);
-                this.frontBottomRight.Raycast(ray, objectCallback, ref data);
-                this.frontTopLeft.Raycast(ray, objectCallback, ref data);
-                this.frontTopRight.Raycast(ray, objectCallback, ref data);
-                this.backBottomLeft.Raycast(ray, objectCallback, ref data);
-                this.backBottomRight.Raycast(ray, objectCallback, ref data);
-                this.backTopLeft.Raycast(ray, objectCallback, ref data);
-                this.backTopRight.Raycast(ray, objectCallback, ref data);
+                this.frontBottomLeft.Raycast(ray, objectCallback, ref stateData);
+                this.frontBottomRight.Raycast(ray, objectCallback, ref stateData);
+                this.frontTopLeft.Raycast(ray, objectCallback, ref stateData);
+                this.frontTopRight.Raycast(ray, objectCallback, ref stateData);
+                this.backBottomLeft.Raycast(ray, objectCallback, ref stateData);
+                this.backBottomRight.Raycast(ray, objectCallback, ref stateData);
+                this.backTopLeft.Raycast(ray, objectCallback, ref stateData);
+                this.backTopRight.Raycast(ray, objectCallback, ref stateData);
             }
         }
 
-        public delegate void RaycastCallback<T>(int idx, ref T data);
+        public delegate void RaycastCallback<TState>(ref TState state, ref T stateData);
 
         private int maxObjectsPerBucket;
         private int maxDepth;
         private Bucket root;
         private BoundingBox[] boundingBoxes;
 
-        public void Raycast<T>(Ray ray, RaycastCallback<T> objectCallback, ref T data)
+        public void Raycast<TState>(Ray ray, RaycastCallback<TState> objectCallback, ref TState data)
         {
-            root.Raycast<T>(ray, objectCallback, ref data);
+            root.Raycast(ray, objectCallback, ref data);
         }
 
-        public void Bake(BoundingBox[] boundingBoxes, int maxObjectsPerBucket = 32, int maxDepth = 16)
+        public void Bake(BoundingBox[] boundingBoxes, T baseContainer, int maxObjectsPerBucket = 32, int maxDepth = 16)
         {
             this.boundingBoxes = boundingBoxes;
             this.maxObjectsPerBucket = maxObjectsPerBucket;
@@ -152,6 +159,7 @@ namespace PathTracer
                 max = max
             };
             this.root = new Bucket(this, bounds);
+            root.container = baseContainer;
 
             // Root bucket
             root.boundingBox = bounds;
