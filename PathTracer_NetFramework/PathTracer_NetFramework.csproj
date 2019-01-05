@@ -75,6 +75,9 @@
     <Compile Include="..\PathTracer\DielectricMaterial.cs">
       <Link>DielectricMaterial.cs</Link>
     </Compile>
+    <Compile Include="..\PathTracer\DirectionalLight.cs">
+      <Link>DirectionalLight.cs</Link>
+    </Compile>
     <Compile Include="..\PathTracer\FastRandom.cs">
       <Link>FastRandom.cs</Link>
     </Compile>

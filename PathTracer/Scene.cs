@@ -31,12 +31,38 @@ namespace PathTracer
         public abstract void Raycast(Ray[] rays, HitInfo[] hits, float minDist, float maxDist, int count, uint rayMask, ref uint hitMask);
     }
 
+    public interface ISceneLight
+    {
+
+    }
+
+    public interface ISceneLightSystem
+    {
+        void PrepareForRendering(Scene scene);
+    }
+
+    public abstract class SceneLightSystem<TLight> : ISceneLightSystem where TLight : ISceneLight
+    {
+        protected List<TLight> lights = new List<TLight>();
+        protected Scene scene;
+
+        public int Add(TLight obj)
+        {
+            this.lights.Add(obj);
+            return lights.Count - 1;
+        }
+
+        public virtual void PrepareForRendering(Scene scene) { this.scene = scene; }
+    }
+
     public class Scene
     {
         private List<ISceneHitSystem> hitSystems = new List<ISceneHitSystem>();
         private ISceneHitSystem[] _hitSystems;
+        private List<ISceneLightSystem> lightSystems = new List<ISceneLightSystem>();
+        private ISceneLightSystem[] _lightSystems;
 
-        public TSystem GetOrCreate<TSystem>() where TSystem : class, ISceneHitSystem, new()
+        public TSystem GetOrCreateHitSystem<TSystem>() where TSystem : class, ISceneHitSystem, new()
         {
             TSystem sys = null;
             foreach (var hitSystem in hitSystems)
@@ -55,11 +81,34 @@ namespace PathTracer
             return sys;
         }
 
+        public TSystem GetOrCreateLightSystem<TSystem>() where TSystem : class, ISceneLightSystem, new()
+        {
+            TSystem sys = null;
+            foreach (var lightSystem in lightSystems)
+            {
+                sys = lightSystem as TSystem;
+                if (sys != null)
+                    break;
+            }
+
+            if (sys == null)
+            {
+                sys = new TSystem();
+                this.lightSystems.Add(sys);
+            }
+
+            return sys;
+        }
+
         public void PrepareForRendering()
         {
             _hitSystems = hitSystems.ToArray();
+            _lightSystems = lightSystems.ToArray();
+
             for (int i = 0; i < _hitSystems.Length; i++)
                 _hitSystems[i].PrepareForRendering();
+            for (int i = 0; i < _lightSystems.Length; i++)
+                _lightSystems[i].PrepareForRendering();
         }
 
         public void Raycast(Ray[] rays, HitInfo[] hits, float minDist, float maxDist, int count, uint rayMask, ref uint hitMask, ref long rayCounter)

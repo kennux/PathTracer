@@ -19,6 +19,7 @@
     <Compile Include="..\PathTracer\Camera.cs" Link="Camera.cs" />
     <Compile Include="..\PathTracer\DebugMaterial.cs" Link="DebugMaterial.cs" />
     <Compile Include="..\PathTracer\DielectricMaterial.cs" Link="DielectricMaterial.cs" />
+    <Compile Include="..\PathTracer\DirectionalLight.cs" Link="DirectionalLight.cs" />
     <Compile Include="..\PathTracer\FastRandom.cs" Link="FastRandom.cs" />
     <Compile Include="..\PathTracer\HitInfo.cs" Link="HitInfo.cs" />
     <Compile Include="..\PathTracer\LambertianMaterial.cs" Link="LambertianMaterial.cs" />
