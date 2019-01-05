@@ -40,11 +40,13 @@ namespace PathTracer
         }
         public Vector3 min;
         public Vector3 max;
+        public Vector3 center;
 
         public BoundingBox(Vector3 min, Vector3 max)
         {
             this.min = min;
             this.max = max;
+            this.center = (min + max) / 2f;
         }
 
         public bool Overlaps(BoundingBox box)
@@ -63,6 +65,15 @@ namespace PathTracer
 
         public bool RayIntersection(ref Ray r)
         {
+            if (Vector3.Dot(r.direction, (center - r.origin)) < 0)
+            {
+                // Ray pointing away from the box, only hit if inside the box
+                if ((r.origin.X > min.X && r.origin.Y > min.Y && r.origin.Z > min.Z)
+                    && (r.origin.X < max.X && r.origin.Y < max.Y && r.origin.Z < max.Z))
+                    return true;
+                return false;
+            }
+
             float tmin = (min.X - r.origin.X) / r.direction.X;
             float tmax = (max.X - r.origin.X) / r.direction.X;
 

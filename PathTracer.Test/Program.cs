@@ -103,11 +103,11 @@ namespace PathTracer.Test
                 camera = camera,
                 height = height,
                 width = width,
-                samplesPerPixel = 2048,
+                samplesPerPixel = 4096*4,
                 scene = scene,
-                maxBounces = 12,
+                maxBounces = 6,
                 maxDepth = float.PositiveInfinity,
-                traceTileDimension = 16,
+                traceTileDimension = 32,
                 multithreading = true
             };
             var result = Tracer.Render(parameters, (count, processed) =>
@@ -122,8 +122,8 @@ namespace PathTracer.Test
 
         static void Main(string[] args)
         {
-            int width = 640;
-            int height = 480;
+            int width = 1920;
+            int height = 1080;
             Stopwatch swInit, swRender;
             Camera camera;
 
