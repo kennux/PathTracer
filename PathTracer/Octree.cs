@@ -14,13 +14,15 @@ namespace PathTracer
 
     public class OCTree<T> where T : ISoAContainer<T>, new()
     {
+        private const int ChildBucketCount = 8;
+
         public class Bucket
         {
             public BoundingBox boundingBox;
             public int[] indices;
             public T container;
 
-            private Bucket parent;
+            private readonly Bucket parent;
             private OCTree<T> tree;
 
             private Bucket[] children;
@@ -64,7 +66,7 @@ namespace PathTracer
                 backBottomRight.BuildFromParent();
                 backTopLeft.BuildFromParent();
                 backTopRight.BuildFromParent();
-                this.children = new Bucket[8];
+                this.children = new Bucket[ChildBucketCount];
                 this.children[0] = frontBottomLeft;
                 this.children[1] = frontBottomRight;
                 this.children[2] = frontTopLeft;
@@ -73,7 +75,7 @@ namespace PathTracer
                 this.children[5] = backBottomRight;
                 this.children[6] = backTopLeft;
                 this.children[7] = backTopRight;
-                this.childrenBounds = new BoundingBoxSoA(8);
+                this.childrenBounds = new BoundingBoxSoA(ChildBucketCount);
                 this.childrenBounds[0] = _frontBottomLeft;
                 this.childrenBounds[1] = _frontBottomRight;
                 this.childrenBounds[2] = _frontTopLeft;
@@ -84,6 +86,7 @@ namespace PathTracer
                 this.childrenBounds[7] = _backTopRight;
 
                 this.container = default(T); // Reset container
+                this.indices = null;
             }
 
             private static List<int> tmpList = new List<int>();
@@ -109,15 +112,12 @@ namespace PathTracer
 
             public void Raycast<TState>(Ray ray, RaycastCallback<TState> objectCallback, ref TState stateData)
             {
-                if (!this.boundingBox.RayIntersection(ref ray))
-                    return;
-
                 PropagateRaycast<TState>(ray, objectCallback, ref stateData);
             }
 
             private void PropagateRaycast<TState>(Ray ray, RaycastCallback<TState> objectCallback, ref TState stateData)
             {
-                if (!this.isSubdivided)
+                if (!this.isSubdivided || !ReferenceEquals(this.indices, null))
                 {
                     objectCallback(ref stateData, ref this.container);
                     return;
@@ -127,7 +127,7 @@ namespace PathTracer
                 Vector3[] min = this.childrenBounds.min;
                 Vector3[] max = this.childrenBounds.max;
                 Vector3[] center = this.childrenBounds.center;
-                for (int i = 0; i < 8; i++)
+                for (int i = 0; i < ChildBucketCount; i++)
                 {
                     if (BoundingBox.RayIntersection(ref min[i], ref max[i], ref center[i], ref ray))
                         this.children[i].PropagateRaycast<TState>(ray, objectCallback, ref stateData);

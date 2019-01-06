@@ -128,8 +128,8 @@ namespace PathTracer.Test
             Stopwatch swInit, swRender;
             Camera camera;
 
-            // var scene = SimpleSphereScene(width, height, out swInit, out camera);
-            var scene = TeapotScene(width, height, out swInit, out camera);
+            var scene = SimpleSphereScene(width, height, out swInit, out camera);
+            // var scene = TeapotScene(width, height, out swInit, out camera);
             var result = TraceTest(width, height, scene, camera, out swRender);
 
             Console.WriteLine("Saving image file...");
