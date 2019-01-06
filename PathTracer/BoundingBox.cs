@@ -8,6 +8,66 @@ using System.Numerics;
 
 namespace PathTracer
 {
+    public struct BoundingBoxSoA : ISoAContainer<BoundingBoxSoA>
+    {
+        public Vector3[] min;
+        public Vector3[] max;
+        public Vector3[] center;
+        public int objectCount;
+
+        public BoundingBox this[int i]
+        {
+            get
+            {
+                return new BoundingBox(min[i], max[i]);
+            }
+            set
+            {
+                min[i] = value.min;
+                max[i] = value.max;
+                center[i] = value.center;
+            }
+        }
+
+        public BoundingBoxSoA(int count)
+        {
+            this.objectCount = count;
+            this.min = new Vector3[this.objectCount];
+            this.max = new Vector3[this.objectCount];
+            this.center = new Vector3[this.objectCount];
+        }
+
+        public BoundingBoxSoA(BoundingBox[] boundingBoxes)
+        {
+            this.objectCount = boundingBoxes.Length;
+            this.min = new Vector3[this.objectCount];
+            this.max = new Vector3[this.objectCount];
+            this.center = new Vector3[this.objectCount];
+
+            for (int i = 0; i < this.objectCount; i++)
+            {
+                this.min[i] = boundingBoxes[i].min;
+                this.max[i] = boundingBoxes[i].max;
+                this.center[i] = boundingBoxes[i].center;
+            }
+        }
+
+        public void CreateFromSubsetOfOther(BoundingBoxSoA other, int[] indices)
+        {
+            this.objectCount = indices.Length;
+            this.min = new Vector3[this.objectCount];
+            this.max = new Vector3[this.objectCount];
+            this.center = new Vector3[this.objectCount];
+
+            for (int i = 0; i < this.objectCount; i++)
+            {
+                this.min[i] = other.min[indices[i]];
+                this.max[i] = other.max[indices[i]];
+                this.center[i] = other.center[indices[i]];
+            }
+        }
+    }
+
     /// <summary>
     /// Bounding box implementation.
     /// </summary>
@@ -46,32 +106,31 @@ namespace PathTracer
             return new BoundingBox(min, max);
         }
 
-        public Vector3 min;
-        public Vector3 max;
-        public Vector3 center;
-
-        public BoundingBox(Vector3 min, Vector3 max)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool Overlaps(ref Vector3 min, ref Vector3 max, ref Vector3 otherMin, ref Vector3 otherMax)
         {
-            this.min = min;
-            this.max = max;
-            this.center = (min + max) / 2f;
-        }
-
-        public bool Overlaps(BoundingBox box)
-        {
-            if (this.min.X > box.max.X || box.min.X > this.max.X)
+            if (min.X > otherMax.X || otherMin.X > max.X)
                 return false;
 
-            if (this.min.Y > box.max.Y || box.min.Y > this.max.Y)
+            if (min.Y > otherMax.Y || otherMin.Y > max.Y)
                 return false;
 
-            if (this.min.Z > box.max.Z || box.min.Z > this.max.Z)
+            if (min.Z > otherMax.Z || otherMin.Z > max.Z)
                 return false;
 
             return true;
         }
 
-        public bool RayIntersection(ref Ray r)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void Swap(ref float a, ref float b)
+        {
+            float c = a;
+            a = b;
+            b = c;
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool RayIntersection(ref Vector3 min, ref Vector3 max, ref Vector3 center, ref Ray r)
         {
             if (Vector3.Dot(r.direction, (center - r.origin)) < 0)
             {
@@ -118,12 +177,25 @@ namespace PathTracer
             return true;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void Swap(ref float a, ref float b)
+        public Vector3 min;
+        public Vector3 max;
+        public Vector3 center;
+
+        public BoundingBox(Vector3 min, Vector3 max)
         {
-            float c = a;
-            a = b;
-            b = c;
+            this.min = min;
+            this.max = max;
+            this.center = (min + max) / 2f;
+        }
+
+        public bool Overlaps(BoundingBox box)
+        {
+            return Overlaps(ref this.min, ref this.max, ref box.min, ref box.max);
+        }
+
+        public bool RayIntersection(ref Ray r)
+        {
+            return RayIntersection(ref min, ref max, ref center, ref r);
         }
     }
 }

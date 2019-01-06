@@ -23,15 +23,10 @@ namespace PathTracer
             private Bucket parent;
             private OCTree<T> tree;
 
+            private Bucket[] children;
+            private BoundingBoxSoA childrenBounds;
+
             public bool isSubdivided;
-            public Bucket frontBottomLeft; // Min
-            public Bucket frontBottomRight;
-            public Bucket frontTopLeft;
-            public Bucket frontTopRight;
-            public Bucket backBottomLeft;
-            public Bucket backBottomRight;
-            public Bucket backTopLeft;
-            public Bucket backTopRight; // Max
             public int depth = 0;
 
             public Bucket(OCTree<T> tree, BoundingBox boundingBox, Bucket parent = null)
@@ -47,37 +42,48 @@ namespace PathTracer
                     return;
 
                 // Subdivide
-                BoundingBox frontBottomLeft, frontBottomRight, frontTopLeft, frontTopRight, backBottomLeft, backBottomRight, backTopLeft, backTopRight;
-                BoundingBox.Subdivide(this.boundingBox, out frontBottomLeft, out frontBottomRight, out frontTopLeft,
-                    out frontTopRight, out backBottomLeft, out backBottomRight, out backTopLeft, out backTopRight);
+                BoundingBox _frontBottomLeft, _frontBottomRight, _frontTopLeft, _frontTopRight, _backBottomLeft, _backBottomRight, _backTopLeft, _backTopRight;
+                BoundingBox.Subdivide(this.boundingBox, out _frontBottomLeft, out _frontBottomRight, out _frontTopLeft,
+                    out _frontTopRight, out _backBottomLeft, out _backBottomRight, out _backTopLeft, out _backTopRight);
 
                 this.isSubdivided = true;
-                this.frontBottomLeft = new Bucket(this.tree, frontBottomLeft, this);
-                this.frontBottomRight = new Bucket(this.tree, frontBottomRight, this);
-                this.frontTopLeft = new Bucket(this.tree, frontTopLeft, this);
-                this.frontTopRight = new Bucket(this.tree, frontTopRight, this);
-                this.backBottomLeft = new Bucket(this.tree, backBottomLeft, this);
-                this.backBottomRight = new Bucket(this.tree, backBottomRight, this);
-                this.backTopLeft = new Bucket(this.tree, backTopLeft, this);
-                this.backTopRight = new Bucket(this.tree, backTopRight, this);
+                Bucket frontBottomLeft = new Bucket(this.tree, _frontBottomLeft, this);
+                Bucket frontBottomRight = new Bucket(this.tree, _frontBottomRight, this);
+                Bucket frontTopLeft = new Bucket(this.tree, _frontTopLeft, this);
+                Bucket frontTopRight = new Bucket(this.tree, _frontTopRight, this);
+                Bucket backBottomLeft = new Bucket(this.tree, _backBottomLeft, this);
+                Bucket backBottomRight = new Bucket(this.tree, _backBottomRight, this);
+                Bucket backTopLeft = new Bucket(this.tree, _backTopLeft, this);
+                Bucket backTopRight = new Bucket(this.tree, _backTopRight, this);
 
-                this.frontBottomLeft.BuildFromParent();
-                this.frontBottomRight.BuildFromParent();
-                this.frontTopLeft.BuildFromParent();
-                this.frontTopRight.BuildFromParent();
-                this.backBottomLeft.BuildFromParent();
-                this.backBottomRight.BuildFromParent();
-                this.backTopLeft.BuildFromParent();
-                this.backTopRight.BuildFromParent();
+                frontBottomLeft.BuildFromParent();
+                frontBottomRight.BuildFromParent();
+                frontTopLeft.BuildFromParent();
+                frontTopRight.BuildFromParent();
+                backBottomLeft.BuildFromParent();
+                backBottomRight.BuildFromParent();
+                backTopLeft.BuildFromParent();
+                backTopRight.BuildFromParent();
+                this.children = new Bucket[8];
+                this.children[0] = frontBottomLeft;
+                this.children[1] = frontBottomRight;
+                this.children[2] = frontTopLeft;
+                this.children[3] = frontTopRight;
+                this.children[4] = backBottomLeft;
+                this.children[5] = backBottomRight;
+                this.children[6] = backTopLeft;
+                this.children[7] = backTopRight;
+                this.childrenBounds = new BoundingBoxSoA(8);
+                this.childrenBounds[0] = _frontBottomLeft;
+                this.childrenBounds[1] = _frontBottomRight;
+                this.childrenBounds[2] = _frontTopLeft;
+                this.childrenBounds[3] = _frontTopRight;
+                this.childrenBounds[4] = _backBottomLeft;
+                this.childrenBounds[5] = _backBottomRight;
+                this.childrenBounds[6] = _backTopLeft;
+                this.childrenBounds[7] = _backTopRight;
 
-                int c = this.frontBottomLeft.indices.Length +
-                    this.frontBottomRight.indices.Length +
-                    this.frontTopLeft.indices.Length +
-                    this.frontTopRight.indices.Length +
-                    this.backBottomLeft.indices.Length +
-                    this.backBottomRight.indices.Length +
-                    this.backTopLeft.indices.Length +
-                    this.backTopRight.indices.Length;
+                this.container = default(T); // Reset container
             }
 
             private static List<int> tmpList = new List<int>();
@@ -106,6 +112,11 @@ namespace PathTracer
                 if (!this.boundingBox.RayIntersection(ref ray))
                     return;
 
+                PropagateRaycast<TState>(ray, objectCallback, ref stateData);
+            }
+
+            private void PropagateRaycast<TState>(Ray ray, RaycastCallback<TState> objectCallback, ref TState stateData)
+            {
                 if (!this.isSubdivided)
                 {
                     objectCallback(ref stateData, ref this.container);
@@ -113,14 +124,14 @@ namespace PathTracer
                 }
 
                 // Propagate
-                this.frontBottomLeft.Raycast(ray, objectCallback, ref stateData);
-                this.frontBottomRight.Raycast(ray, objectCallback, ref stateData);
-                this.frontTopLeft.Raycast(ray, objectCallback, ref stateData);
-                this.frontTopRight.Raycast(ray, objectCallback, ref stateData);
-                this.backBottomLeft.Raycast(ray, objectCallback, ref stateData);
-                this.backBottomRight.Raycast(ray, objectCallback, ref stateData);
-                this.backTopLeft.Raycast(ray, objectCallback, ref stateData);
-                this.backTopRight.Raycast(ray, objectCallback, ref stateData);
+                Vector3[] min = this.childrenBounds.min;
+                Vector3[] max = this.childrenBounds.max;
+                Vector3[] center = this.childrenBounds.center;
+                for (int i = 0; i < 8; i++)
+                {
+                    if (BoundingBox.RayIntersection(ref min[i], ref max[i], ref center[i], ref ray))
+                        this.children[i].PropagateRaycast<TState>(ray, objectCallback, ref stateData);
+                }
             }
         }
 

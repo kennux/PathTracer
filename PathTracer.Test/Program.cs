@@ -68,7 +68,7 @@ namespace PathTracer.Test
             List<Triangle> triangles = new List<Triangle>();
             WavefrontLoader.Load(File.ReadAllText(@"Resources/Teapot/teapot.obj"), ref triangles);
 
-            var mat = new MetalMaterial(new Vector3(.25f, .25f, .25f), .4f);
+            var mat = new MetalMaterial(new Vector3(1, .84f, 0), .01f);
             // var mat = new DielectricMaterial(1.5f);
             for (int i = 0; i < triangles.Count; i++)
             {
@@ -96,6 +96,7 @@ namespace PathTracer.Test
 
         private static TraceResult TraceTest(int width, int height, Scene scene, Camera camera, out Stopwatch stopwatch)
         {
+            GC.Collect(int.MaxValue, GCCollectionMode.Forced, true, true); // Clean up heap from baking
             stopwatch = Stopwatch.StartNew();
             TraceParams parameters = new TraceParams()
             {
@@ -103,11 +104,11 @@ namespace PathTracer.Test
                 camera = camera,
                 height = height,
                 width = width,
-                samplesPerPixel = 64,
+                samplesPerPixel = 256,
                 scene = scene,
                 maxBounces = 6,
                 maxDepth = float.PositiveInfinity,
-                traceTileDimension = 32,
+                traceTileDimension = 16,
                 tracingProcessor = TracingProcessors<MultithreadedCPUProcessor>.instance
             };
             var result = Tracer.Render(parameters, (count, processed) =>
@@ -122,8 +123,8 @@ namespace PathTracer.Test
 
         static void Main(string[] args)
         {
-            int width = 640;
-            int height = 480;
+            int width = 1280;
+            int height = 720;
             Stopwatch swInit, swRender;
             Camera camera;
 
@@ -131,9 +132,7 @@ namespace PathTracer.Test
             var scene = TeapotScene(width, height, out swInit, out camera);
             var result = TraceTest(width, height, scene, camera, out swRender);
 
-            double mRays = (result.rayCount / 1000000d);
-            Console.WriteLine("RayCount: " + mRays.ToString("0.00") + " MRays | " + swRender.Elapsed.TotalMilliseconds.ToString("0.000") + " ms, Init: " + swInit.Elapsed.TotalMilliseconds.ToString("0.000") + " ms | " + (mRays / swRender.Elapsed.TotalSeconds).ToString("0.00") + " MRays/s");
-
+            Console.WriteLine("Saving image file...");
             Bitmap bmp = new Bitmap(width, height);
             int idx = 0;
             for (int y = 0; y < result.parameters.height; y++)
@@ -150,6 +149,9 @@ namespace PathTracer.Test
                 }
 
             bmp.Save(@"test.png");
+
+            double mRays = (result.rayCount / 1000000d);
+            Console.WriteLine("RayCount: " + mRays.ToString("0.00") + " MRays | " + swRender.Elapsed.TotalMilliseconds.ToString("0.000") + " ms, Init: " + swInit.Elapsed.TotalMilliseconds.ToString("0.000") + " ms | " + (mRays / swRender.Elapsed.TotalSeconds).ToString("0.00") + " MRays/s");
             Console.ReadLine();
         }
     }
