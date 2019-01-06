@@ -44,7 +44,6 @@ namespace PathTracer
         {
             public Ray ray;
             public uint hitMask;
-            public HitInfo hitInfo;
             public HitInfo[] hits;
             public float minDist;
             public float maxDist;

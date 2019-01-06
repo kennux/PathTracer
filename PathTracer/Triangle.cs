@@ -58,41 +58,47 @@ namespace PathTracer
 
         protected override void Raycast(ref State state, ref TriangleSoA container)
         {
+            Ray ray = state.ray;
+            float minDist = state.minDist, maxDist = state.maxDist;
+            int rayIndex = state.rayIndex;
+            HitInfo[] hits = state.hits;
+            HitInfo hitInfo = new HitInfo();
+
             for (int i = 0; i < container.objectCount; i++)
             {
                 // https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm
-                Vector3 e1, e2, e3;
+                Vector3 e1, e2;
                 Vector3 p1 = container.p1[i];
                 Vector3 p2 = container.p2[i];
                 Vector3 p3 = container.p3[i];
 
                 e1 = p2 - p1;
                 e2 = p3 - p1;
-                Vector3 h = Vector3.Cross(state.ray.direction, e2);
+                Vector3 h = Vector3.Cross(ray.direction, e2);
                 float a = Vector3.Dot(e1, h);
                 if (a > -Epsilon && a < Epsilon)
                     continue;
 
                 float f = 1.0f / a;
-                Vector3 s = state.ray.origin - p1;
+                Vector3 s = ray.origin - p1;
                 float u = f * Vector3.Dot(s, h);
                 if (u < 0 || u > 1)
                     continue;
 
                 Vector3 q = Vector3.Cross(s, e1);
-                float v = f * Vector3.Dot(state.ray.direction, q);
+                float v = f * Vector3.Dot(ray.direction, q);
                 if (v < 0 || (u + v) > 1)
                     continue;
 
                 float t = f * Vector3.Dot(e2, q);
-                if (t > state.minDist && t <= state.maxDist)
+                if (t > minDist && t <= maxDist)
                 {
-                    state.hitInfo.distance = t;
-                    state.hitInfo.material = container.material[i];
-                    state.ray.GetPointOptimized(t, ref state.hitInfo.point);
+                    hitInfo.distance = t;
+                    hitInfo.material = container.material[i];
+                    ray.GetPointOptimized(t, ref hitInfo.point);
 
                     // Barycentric normal
-                    Vector3 v0 = p2 - p1, v1 = p3 - p1, v2 = state.hitInfo.point - p1;
+                    Vector3 v0 = p2 - p1, v1 = p3 - p1, v2 = hitInfo.point - p1;
                     float d00 = Vector3.Dot(v0, v0);
                     float d01 = Vector3.Dot(v0, v1);
                     float d11 = Vector3.Dot(v1, v1);
@@ -103,13 +109,13 @@ namespace PathTracer
                     float baryW = (d00 * d21 - d01 * d20) / denom;
                     float baryU = 1.0f - baryV - baryW;
 
-                    state.hitInfo.normal = container.n1[i] * baryU + container.n2[i] * baryV + container.n3[i] * baryW;
-                    if (BitHelper.GetBit(ref state.hitMask, state.rayIndex))
-                        HitInfo.ExchangeIfBetter(ref state.hits[state.rayIndex], state.hitInfo);
+                    hitInfo.normal = container.n1[i] * baryU + container.n2[i] * baryV + container.n3[i] * baryW;
+                    if (BitHelper.GetBit(ref state.hitMask, rayIndex))
+                        HitInfo.ExchangeIfBetter(ref hits[rayIndex], hitInfo);
                     else
                     {
-                        state.hits[state.rayIndex] = state.hitInfo;
-                        BitHelper.SetBit(ref state.hitMask, state.rayIndex);
+                        hits[rayIndex] = hitInfo;
+                        BitHelper.SetBit(ref state.hitMask, rayIndex);
                     }
                 }
             }

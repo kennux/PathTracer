@@ -71,6 +71,11 @@ namespace PathTracer
         protected override void Raycast(ref State state, ref SphereSoA container)
         {
             Ray ray = state.ray;
+            float minDist = state.minDist, maxDist = state.maxDist;
+            int rayIndex = state.rayIndex;
+            HitInfo[] hits = state.hits;
+            HitInfo hitInfo = new HitInfo();
+
             for (int j = 0; j < container.objectCount; j++)
             {
                 // Inlined and optimized math
@@ -86,22 +91,22 @@ namespace PathTracer
                 if (discriminantSqr > 0)
                 {
                     float discriminant = Mathf.Sqrt(discriminantSqr);
-                    state.hitInfo.distance = (-b - discriminant);
-                    if (state.hitInfo.distance < state.maxDist && state.hitInfo.distance > state.minDist)
+                    hitInfo.distance = (-b - discriminant);
+                    if (hitInfo.distance < maxDist && hitInfo.distance > minDist)
                     {
-                        ray.GetPointOptimized(state.hitInfo.distance, ref state.hitInfo.point);
-                        state.hitInfo.normal = (state.hitInfo.point - center) * container.invRadius[j];
-                        state.hitInfo.material = container.material[j];
+                        ray.GetPointOptimized(hitInfo.distance, ref hitInfo.point);
+                        hitInfo.normal = (hitInfo.point - center) * container.invRadius[j];
+                        hitInfo.material = container.material[j];
                         hasHit = true;
                     }
                     else
                     {
-                        state.hitInfo.distance = (-b + discriminant);
-                        if (state.hitInfo.distance < state.maxDist && state.hitInfo.distance > state.minDist)
+                        hitInfo.distance = (-b + discriminant);
+                        if (hitInfo.distance < maxDist && hitInfo.distance > minDist)
                         {
-                            ray.GetPointOptimized(state.hitInfo.distance, ref state.hitInfo.point);
-                            state.hitInfo.normal = (state.hitInfo.point - center) * container.invRadius[j];
-                            state.hitInfo.material = container.material[j];
+                            ray.GetPointOptimized(hitInfo.distance, ref hitInfo.point);
+                            hitInfo.normal = (hitInfo.point - center) * container.invRadius[j];
+                            hitInfo.material = container.material[j];
                             hasHit = true;
                         }
                     }
@@ -109,12 +114,12 @@ namespace PathTracer
 
                 if (hasHit)
                 {
-                    if (BitHelper.GetBit(ref state.hitMask, state.rayIndex))
-                        HitInfo.ExchangeIfBetter(ref state.hits[state.rayIndex], state.hitInfo);
+                    if (BitHelper.GetBit(ref state.hitMask, rayIndex))
+                        HitInfo.ExchangeIfBetter(ref state.hits[rayIndex], hitInfo);
                     else
                     {
-                        state.hits[state.rayIndex] = state.hitInfo;
-                        BitHelper.SetBit(ref state.hitMask, state.rayIndex);
+                        hits[rayIndex] = hitInfo;
+                        BitHelper.SetBit(ref state.hitMask, rayIndex);
                     }
                 }
             }

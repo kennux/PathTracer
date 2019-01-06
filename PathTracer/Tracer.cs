@@ -90,21 +90,25 @@ namespace PathTracer
         public int yEnd;
     }
 
-    public struct TraceRuntimeParams
+    public class TraceRuntimeParams
     {
+        /// <summary>
+        /// Standard and max.
+        /// </summary>
+        public const int StandardBatchSize = 32;
+
         public float invWidth;
         public float invHeight;
         public float invSamplesPerPixel;
 
-        public int sampleBatches;
-        public int batchSize;
+        public int sampleBatchCount;
+        public int batchSize = StandardBatchSize;
     }
 
     public delegate void ProgressReportDelegate(int tileCount, int tilesProcessed);
 
     public static class Tracer
     {
-
         public static TraceResult Render(TraceParams parameters, ProgressReportDelegate progressReport = null, float[] backbuffer = null)
         {
             // Allocate backbuffer
@@ -121,8 +125,7 @@ namespace PathTracer
             runtimeParams.invWidth = 1.0f / parameters.width;
             runtimeParams.invHeight = 1.0f / parameters.height;
             runtimeParams.invSamplesPerPixel = 1.0f / parameters.samplesPerPixel;
-            runtimeParams.batchSize = 32;
-            runtimeParams.sampleBatches = (int)Mathf.Ceiling(parameters.samplesPerPixel / (float)runtimeParams.batchSize);
+            runtimeParams.sampleBatchCount = (int)Mathf.Ceiling(parameters.samplesPerPixel / (float)runtimeParams.batchSize);
 
             List<TileTraceParameters> traceTiles = new List<TileTraceParameters>();
             for (int y = 0; y < parameters.height; y+= parameters.traceTileDimension)
@@ -144,12 +147,29 @@ namespace PathTracer
             parameters.tracingProcessor.Trace(traceTiles, ref result, progressReport);
             return result;
         }
+        
+        [ThreadStatic]
+        private static Ray[] _rays = null;
+        [ThreadStatic]
+        private static HitInfo[] _hits = null;
+        [ThreadStatic]
+        private static Vector3[] _localColor = null;
+
+        private static void InitBatchArray<T>(ref T[] array)
+        {
+            if (ReferenceEquals(array, null))
+                array = new T[TraceRuntimeParams.StandardBatchSize];
+        }
 
         public static void TraceTile(TileTraceParameters tile, float[] backbuffer, out long rayCount)
         {
-            Ray[] rays = new Ray[tile.runtimeParams.batchSize];
-            HitInfo[] hits = new HitInfo[tile.runtimeParams.batchSize];
-            Vector3[] localColor = new Vector3[tile.runtimeParams.batchSize];
+            InitBatchArray(ref _rays);
+            InitBatchArray(ref _hits);
+            InitBatchArray(ref _localColor);
+
+            Ray[] rays = _rays;
+            HitInfo[] hits = _hits;
+            Vector3[] localColor = _localColor;
             uint rndState = FastRandom.Seed();
             rayCount = 0;
 
@@ -158,7 +178,7 @@ namespace PathTracer
                 {
                     Vector3 color = new Vector3(0, 0, 0);
                     // Sample bouncing batches
-                    for (int b = 0; b < tile.runtimeParams.sampleBatches; b++)
+                    for (int b = 0; b < tile.runtimeParams.sampleBatchCount; b++)
                     {
                         // Calculate batch info
                         int batchStart = b * tile.runtimeParams.batchSize, batchEnd = batchStart + tile.runtimeParams.batchSize;
